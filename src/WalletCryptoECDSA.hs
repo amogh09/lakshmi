@@ -50,5 +50,5 @@ instance MonadWalletCrytpo WalletCryptoECDSA where
         let privKeySeed = hashWith hashFun . BU.fromString $ passPhrase env ++ suffix
             privKey     = ECDSA.PrivateKey curve . bytesToInteger $ privKeySeed
             pubPoint    = generateQ curve (ECDSA.private_d privKey) 
-        pure . strTolakshmiAddress . showPublicPoint $ pubPoint
+        pure . strToCryptoAddress . showPublicPoint $ pubPoint
         

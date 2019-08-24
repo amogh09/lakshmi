@@ -18,6 +18,7 @@ import System.IO
 import System.IO.Error
 import System.Directory
 import Control.Exception
+import IOUtil
 
 newtype UserDbFileBased a = UserDbFileBased {
         unUserDbFileBased :: ExceptT UserDbError (ReaderT UserDbFileBasedEnv IO) a
@@ -44,10 +45,8 @@ runUserDbFileBased p u = runReaderT (runExceptT (unUserDbFileBased u)) p
 workDir :: UserDbFileBasedEnv -> FilePath
 workDir env = workingDirectory env </> user env ++ ".db"
 
-catchIO :: UserDbFileBasedEnv -> IO a -> UserDbFileBased a
-catchIO env l = do 
-    e <- liftIO $ (Right <$> l) `catch` (pure . Left . UserDbErrorIO env)
-    either throwError pure e
+catchUserIO :: UserDbFileBasedEnv -> IO a -> UserDbFileBased a
+catchUserIO env = catchIO (UserDbErrorIO env)
 
 handleUserDbError :: UserDbError -> String 
 handleUserDbError (UserDbErrorIO env e) 
@@ -58,11 +57,11 @@ handleUserDbError (UserDbErrorStr _ s)            = s
 instance MonadUserDb UserDbFileBased where 
     getUserSeqNum = do 
         env <- ask
-        catchIO env $ read <$> withFile (workDir env) ReadMode hGetLine
+        catchUserIO env $ read <$> withFile (workDir env) ReadMode hGetLine
 
     setUserSeqNum n = do 
         env <- ask 
-        catchIO env $ withFile (workDir env) WriteMode (flip hPutStrLn (show n))
+        catchUserIO env $ writeFile (workDir env) (show n)
 
     initUser = do 
         env <- ask 
@@ -70,4 +69,4 @@ instance MonadUserDb UserDbFileBased where
         exists <- liftIO (doesFileExist path)
         case exists of 
             True -> throwError . UserDbErrorStr env $ "This user has already been registered."
-            False -> catchIO env $ withFile path WriteMode (`hPutStrLn` "1")
+            False -> catchUserIO env $ withFile path WriteMode (`hPutStrLn` "1")
