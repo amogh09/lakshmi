@@ -30,6 +30,8 @@ dependencies:
 - utf8-string
 - vector
 - cereal
+- hspec
+- QuickCheck
 
 library:
   source-dirs: src

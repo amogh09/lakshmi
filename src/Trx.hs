@@ -3,9 +3,9 @@
 module Trx
     (
         LakshmiAddress
-    ,   Trx
-    ,   TrxInput 
-    ,   TrxOutput
+    ,   Trx (..)
+    ,   TrxInput (..)
+    ,   TrxOutput (..)
     ,   
     ) where
 
@@ -18,14 +18,14 @@ type TrxHash = String
 data TrxInput = TrxInput {
         _prevTrx :: TrxHash
     ,   _index   :: Int
-    } deriving (Show, Generic, S.Serialize)
+    } deriving (Show, Generic, S.Serialize, Eq)
 
-data TrxOutput = Output {
+data TrxOutput = TrxOutput {
         _value   :: Integer 
     ,   _address :: LakshmiAddress
-    } deriving (Show, Generic, S.Serialize)
+    } deriving (Show, Generic, S.Serialize, Eq)
 
 data Trx = Trx {
         _inputs  :: [TrxInput]
     ,   _outputs :: [TrxOutput]
-    } deriving (Show, Generic, S.Serialize)
+    } deriving (Show, Generic, S.Serialize, Eq)
