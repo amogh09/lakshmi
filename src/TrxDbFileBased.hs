@@ -5,7 +5,7 @@ module TrxDbFileBased
         TrxDbFileBased
     ,   TrxDbFileBasedEnv (..)
     ,   runTrxDbFileBased
-    ,   TrxDbError
+    ,   TrxDbError (..)
     ,   MonadTrxDbFileBasedIO (..)
     ,   MonadTrxDb (..)
     ) where
@@ -34,7 +34,7 @@ instance MonadTrans TrxDbFileBased where
     lift = TrxDbFileBased . lift . lift
 
 data TrxDbFileBasedEnv = TrxDbFileBasedEnv {
-        workingDirectory :: FilePath    
+        trxFilePath :: FilePath
     } deriving (Show)
 
 data TrxDbError = TrxDbErrorIO TrxDbFileBasedEnv IOException
@@ -46,12 +46,6 @@ class Monad f => MonadTrxDbFileBasedIO f where
     writeBytes :: FilePath -> B.ByteString -> f () 
     liftTrxDbFileBasedIO :: f a -> TrxDbFileBased f a
     catchTrxDbFileBasedIO :: Exception e => f a -> (e -> f a) -> f a
-
-fileName :: TrxDbFileBasedEnv -> FilePath 
-fileName env = workingDirectory env </> "trx.dat"
-
--- catchTrxIO :: TrxDbFileBasedEnv -> IO a -> TrxDbFileBased a
--- catchTrxIO env = catchIO (TrxDbErrorIO env) 
 
 instance MonadTrxDbFileBasedIO IO where 
     readBytes = B.readFile
@@ -70,10 +64,10 @@ runTrxDbFileBased e t = runReaderT (runExceptT (unTrxDbFileBased t)) e
 instance (MonadTrxDbFileBasedIO f) => MonadTrxDb (TrxDbFileBased f) where 
     writeAllTrx ts = do 
         env <- ask 
-        catchTrxIO env . writeBytes (fileName env) . S.encode $ ts
+        catchTrxIO env . writeBytes (trxFilePath env) . S.encode $ ts
 
     readAllTrx = do 
         env <- ask 
-        bytes <- catchTrxIO env . readBytes . fileName $ env
+        bytes <- catchTrxIO env . readBytes . trxFilePath $ env
         either (throwError . TrxDbErrorStr env) pure . S.decode $ bytes
         
