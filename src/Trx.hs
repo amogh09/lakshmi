@@ -6,11 +6,13 @@ module Trx
     ,   Trx (..)
     ,   TrxInput (..)
     ,   TrxOutput (..)
-    ,   
+    ,   TrxDecodeException (..)
     ) where
 
+import Type.Reflection        
 import qualified Data.Serialize as S
 import GHC.Generics
+import Control.Exception (Exception)
 
 type LakshmiAddress = String 
 type TrxHash = String
@@ -29,3 +31,8 @@ data Trx = Trx {
         _inputs  :: [TrxInput]
     ,   _outputs :: [TrxOutput]
     } deriving (Show, Generic, S.Serialize, Eq)
+
+data TrxDecodeException = TrxDecodeException String deriving (Typeable, Exception)
+
+instance Show TrxDecodeException where 
+    show (TrxDecodeException s) = s
