@@ -20,10 +20,7 @@ module ModelDbFileBased
 import ModelDbClass
 import Control.Monad.Reader
 import Control.Monad.Except
-import qualified Data.ByteString as B
 import Data.Serialize (encode, decode)
-import System.Directory (doesFileExist)
-import Control.Exception
 import MonadFileRepoClass
 
 newtype ModelDbFileBased m a = ModelDbFileBased {

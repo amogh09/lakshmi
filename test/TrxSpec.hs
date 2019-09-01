@@ -11,31 +11,14 @@ import qualified AddressEncoder as A
 import Debug.Trace
 import Data.List (nub, intersect,(\\))
 import Control.Monad
+import TestFuns
+import ListFuns
 
 trxHasher = A.encode58 . trxHash S.encode
 
-smallNumber :: Gen Int 
-smallNumber = fmap ((`mod` 20) . abs) arbitrary
-
-listOfLen :: (Arbitrary a) => Int -> Gen [a]
-listOfLen x = replicateM x arbitrary
-
-listWithElemsLessThan :: Int -> Gen [Int]
-listWithElemsLessThan x = sublistOf [0..x-1]
-
--- | Checks if a given list has no duplicates in _O(n log n)_.
-hasNoDups :: (Ord a) => [a] -> Bool
-hasNoDups = loop Set.empty
-    where
-    loop _ []       = True
-    loop s (x:xs) | s' <- Set.insert x s, Set.size s' > Set.size s
-                    = loop s' xs
-                    | otherwise
-                    = False
-
 spec :: Spec 
 spec = do 
-    describe "Trx" $ do 
+    describe "revenue" $ do 
         it "collects user's revenue correctly" $ 
             let o1  = TrxOutput 10 "a"
                 o2  = TrxOutput 20 "b"
@@ -48,7 +31,8 @@ spec = do
         it "returns a revenue less than or equal to all output values" $ do
             property $ \(ts,as) -> sumRevenue (revenue as ts) <= sumRevenue (ts >>= _outputs)
 
-        it "converts to and from TrxHashmap correctly" $ do 
+    describe "fromTrxHashMap" $ do
+        it "returns the input to toTrxHashmap" $ do 
             property $ 
                 forAll smallNumber $ \x ->
                 forAll (listOfLen x) $ \ts ->
@@ -91,26 +75,6 @@ spec = do
                     | t == t3 = "h3"
                 res       = utxos hashFun [t1,t2,t3]
             in  res == [("h1",[o1']),("h2",[o2'])]
-
-    describe "selectIdxs" $ do 
-        it "selects elements at given ids" $ 
-            selectIdxs [5,1,8,15] [0..8] == [1,5,8]
-
-        it "has no element in common with those returned by rejectIdxs" $ 
-            property $ \xs -> 
-                hasNoDups xs ==>
-                forAll (listWithElemsLessThan . length $ xs) $ \is ->
-                    let selected = selectIdxs is xs :: [Int]
-                        rejected = rejectIdxs is xs 
-                    in  selected `intersect` rejected == []
-            
-    describe "rejectIdxs" $ do 
-        it "rejects elements at given ids" $ 
-            rejectIdxs [5,1,8,15] [0..18] == ([0..18] \\ [5,1,8,15])
-
-    describe "splitGroupedKV" $ do 
-        it "splits key from head and lists all values correctly" $ 
-            splitGroupedKV [("a",1),("a",2),("a",3)] == ("a",[1,2,3])
 
     describe "groupInputsByPrevHash" $ do 
         it "groups inputs by their previous trx hashes correctly" $ 

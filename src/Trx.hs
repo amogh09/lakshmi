@@ -17,13 +17,12 @@ module Trx
     ,   rejectIdxs
     ) where
 
-import Type.Reflection        
 import qualified Data.Serialize as S
 import GHC.Generics
-import Control.Exception (Exception)
 import qualified Data.Set as Set
 import qualified Data.Map as Map
-import Data.List (groupBy,sort,(\\))
+import ListFuns
+import Data.List (sort, groupBy)
 
 type LakshmiAddress = String 
 type TrxHash = String
@@ -61,31 +60,8 @@ revenue as    = foldr f [] where
 sumRevenue :: [TrxOutput] -> Integer 
 sumRevenue os = sum (os >>= return . _value)
 
-filterTrxHashMap :: [Trx] -> TrxHashMap -> TrxHashMap
-filterTrxHashMap ts = flip Map.withoutKeys $ Set.fromList $ ts >>= _inputs >>= return . _prevTrx
-
-txos :: [Trx] -> [TrxOutput]
-txos ts = ts >>= _outputs
-
 txis :: [Trx] -> [TrxInput]
 txis ts = ts >>= _inputs
-
-utxs :: (Trx -> TrxHash) -> [Trx] -> [Trx]
-utxs thf ts = fromTrxHashMap . filterTrxHashMap ts . toTrxHashMap thf $ ts
-
-splitGroupedKV :: [(a,b)] -> (a,[b])
-splitGroupedKV (x:xs) = (fst x, snd x : fmap snd xs)
-
-selectIdxs :: [Int] -> [a] -> [a]
-selectIdxs idxs xs = f (sort idxs) ([0..] `zip` xs) where 
-    f [] _          = [] 
-    f _ []          = []   
-    f (i:is) ((i',x):xs)
-        | i == i'   = x : f is xs 
-        | otherwise = f (i:is) xs
-
-rejectIdxs :: [Int] -> [a] -> [a]
-rejectIdxs idxs xs = selectIdxs ([0..length xs] \\ sort idxs) xs
 
 groupInputsByPrevHash :: [TrxInput] -> [(TrxHash,[TrxInput])]
 groupInputsByPrevHash is = 
@@ -94,8 +70,7 @@ groupInputsByPrevHash is =
         cmpFst x x' = fst x == fst x'
 
 utxos :: (Trx -> TrxHash) -> [Trx] -> [(TrxHash,[TrxOutput])] 
-utxos thf ts = filter (not . null . snd) . Map.toList . Map.intersectionWith f thm $ inputs 
-    where 
+utxos thf ts = filter (not . null . snd) . Map.toList . Map.intersectionWith f thm $ inputs where 
     thm      = toTrxHashMap thf ts
     inputs   = Map.fromList . groupInputsByPrevHash . txis $ ts
     f t is   = rejectIdxs (fmap _index is) (_outputs t)
