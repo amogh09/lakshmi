@@ -33,6 +33,7 @@ dependencies:
 - cereal
 - hspec
 - QuickCheck
+- containers
 
 library:
   source-dirs: src

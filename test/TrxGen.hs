@@ -22,6 +22,7 @@ instance Arbitrary TrxOutput where
 
 instance Arbitrary Trx where 
     arbitrary = do
-        ins  <- arbitrary
-        outs <- arbitrary
-        pure $ Trx ins outs
+        Positive ts <- arbitrary
+        ins         <- arbitrary
+        outs        <- arbitrary
+        pure $ Trx ts ins outs
