@@ -35,7 +35,7 @@ newtype ModelDbFileBased m a = ModelDbFileBased {
     )
 
 runModelDbFileBased :: FilePath -> ModelDbFileBased m a -> m (Either String a)
-runModelDbFileBased env x = runExceptT (runReaderT (unModelDbFileBased x) env) 
+runModelDbFileBased env x = runExceptT (runReaderT (unModelDbFileBased x) env)
 
 instance MonadTrans ModelDbFileBased where 
     lift = ModelDbFileBased . lift . lift

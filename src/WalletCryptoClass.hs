@@ -15,6 +15,9 @@ data CryptoError = CryptoError String deriving (Show)
 class Monad m => MonadWalletCrytpo m where 
     generateAddress :: String -> m CryptoAddress
 
+addresses :: (MonadWalletCrytpo m) => Int -> m [CryptoAddress]
+addresses n = mapM generateAddress [ show i | i <- [1..n] ]
+
 trxHash :: (Trx -> B.ByteString) -> Trx -> Integer
 trxHash ser = bytesToInteger . hashWith SHA256 . hashWith SHA256 . ser
 
