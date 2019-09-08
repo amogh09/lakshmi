@@ -18,6 +18,7 @@ module Trx
     ,   filterUserRevenue
     ,   userUtxos
     ,   sumRevenue
+    ,   spendUtxos
     ,   TrxHash
     ) where
 
@@ -26,7 +27,7 @@ import GHC.Generics
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import ListFuns
-import Data.List (sort, groupBy)
+import Data.List (sort, groupBy, (\\))
 import Control.Monad
 
 type LakshmiAddress = String 
@@ -52,6 +53,8 @@ type TrxHashMap = Map.Map TrxHash Trx
 
 type Revenue = (TrxHash, [TrxOutput])
 
+type UTXO = TrxInput
+
 fromTrxHashMap :: TrxHashMap -> [Trx]
 fromTrxHashMap = fmap snd . Map.toList
 
@@ -67,31 +70,44 @@ revenue as    = foldr f [] where
 sumOutputValues :: [TrxOutput] -> Integer 
 sumOutputValues os = sum (os >>= return . _value)
 
-txis :: [Trx] -> [TrxInput]
-txis ts = ts >>= _inputs
-
 groupInputsByPrevHash :: [TrxInput] -> [(TrxHash,[TrxInput])]
 groupInputsByPrevHash is = 
     fmap splitGroupedKV . groupBy cmpFst . sort $ [ (_prevTrx i, i) | i <- is ]
     where 
         cmpFst x x' = fst x == fst x'
 
-utxos :: (Trx -> TrxHash) -> [Trx] -> [Revenue] 
-utxos thf ts  = 
-    filter sndFilled . Map.toList . fmap _outputs . Map.differenceWith f thm $ inputs where     
-    sndFilled = not . null . snd
-    thm       = toTrxHashMap thf ts
-    inputs    = Map.fromList . groupInputsByPrevHash . txis $ ts
-    f t is    = case rejectIdxs (fmap _index is) (_outputs t) of 
-                    [] -> Nothing 
-                    os -> Just $ Trx 0 [] os
-    
-filterUserRevenue :: Set.Set LakshmiAddress -> [Revenue] -> [Revenue]
-filterUserRevenue as = foldr f [] where
-    f (h, os) rs = (h,[ o | o <- os, _address o `Set.member` as ]) : rs 
+txis :: TrxHashMap -> [TrxInput]
+txis m = Map.toList m >>= \(_,t) -> _inputs t
 
-userUtxos :: (Trx -> TrxHash) -> Set.Set LakshmiAddress -> [Trx] -> [Revenue]
-userUtxos thf as = filterUserRevenue as . utxos thf 
+utxos :: TrxHashMap -> [UTXO]
+utxos m     = fmap (uncurry TrxInput) (ls' ++ rs') where 
+    ls       = m `Map.difference` inputMap 
+    rs       = Map.intersectionWith f m inputMap 
+    inputMap = fmap (fmap _index) . Map.fromList . groupInputsByPrevHash . txis $ m
+    f t      = (\\) [0..length (_outputs t) - 1]
+    ls'      = flattenKeyVal . Map.toList . fmap (\t -> [0..length (_outputs t)-1]) $ ls 
+    rs'      = flattenKeyVal . Map.toList $ rs
+
+utxoAddress :: TrxHashMap -> UTXO -> LakshmiAddress
+utxoAddress m x = _address o where 
+    t = m Map.! (_prevTrx x) 
+    o = _outputs t !! _index x
+
+filterUserRevenue :: TrxHashMap -> Set.Set LakshmiAddress -> [UTXO] -> [UTXO]
+filterUserRevenue m as = filter (flip Set.member as . utxoAddress m)
+
+userUtxos :: TrxHashMap -> Set.Set LakshmiAddress -> TrxHashMap -> [UTXO]
+userUtxos m as = filterUserRevenue m as . utxos 
 
 sumRevenue :: [Revenue] -> Integer 
 sumRevenue rs = sumOutputValues . join $ [ os | (_,os) <- rs ]
+
+flattenRevenue :: [Revenue] -> [(TrxHash,TrxOutput)]
+flattenRevenue rs = join [ [ (h,o) | o <- os ] | (h,os) <- rs ] 
+
+spendUtxos :: Integer -> [Revenue] -> ([(TrxHash,TrxOutput)],[Revenue])
+spendUtxos x rs     = (reverse rs', drop (length rs') rs) where 
+    rs'             = snd . foldl f (0,[]) . flattenRevenue $ rs 
+    f (x',ps) (h,o)
+        | x' >= x   = (x',ps)
+        | otherwise = (x' + _value o, (h,o):ps)

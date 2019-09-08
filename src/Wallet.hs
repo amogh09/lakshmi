@@ -23,6 +23,7 @@ data WalletEnv = WalletEnv {
 data WalletError = WalletUserDbError UserDbError 
                  | WalletCryptoError CryptoError
                  | WalletModelDbError String
+                 | WalletNotEnoughBalanceError String 
     deriving (Show)
 
 newtype Wallet a = Wallet {
@@ -51,9 +52,10 @@ liftWalletCryptoDSA w = do
     either (throwError . WalletCryptoError) pure $ runWalletCryptoECDSA s w
 
 handleError :: WalletError -> Wallet String 
-handleError (WalletUserDbError e)  = pure . handleUserDbError $ e 
-handleError (WalletCryptoError e)  = pure . handleWalletCryptoError $ e
-handleError (WalletModelDbError s) = pure s
+handleError (WalletUserDbError e)           = pure . handleUserDbError $ e 
+handleError (WalletCryptoError e)           = pure . handleWalletCryptoError $ e
+handleError (WalletModelDbError s)          = pure s
+handleError (WalletNotEnoughBalanceError s) = pure s
 
 newAddress :: Wallet String
 newAddress = do 
@@ -78,9 +80,25 @@ liftTrxDbFileBased d = do
 trxHasher :: Trx -> TrxHash
 trxHasher = A.encode58 . trxHash S.encode
 
-checkBalance :: Wallet Integer 
-checkBalance = do 
-    ts <- liftTrxDbFileBased readModel
-    cs <- liftWalletCryptoDSA $ addresses 100
-    let as = Set.fromList . fmap A.encode58 $ cs
-    pure . sumRevenue . userUtxos trxHasher as $ ts
+-- utxos :: Wallet [Revenue]
+-- utxos = do 
+--     n <- liftUserDb getUserSeqNum
+--     ts <- liftTrxDbFileBased readModel
+--     cs <- liftWalletCryptoDSA $ addresses n
+--     let as = Set.fromList . fmap A.encode58 $ cs
+--     userUtxos trxHasher as $ ts
+
+-- checkBalance :: Wallet Integer 
+-- checkBalance = do 
+--     rs <- utxos
+--     pure . sumRevenue $ rs
+
+-- sendMoney :: [LakshmiAddress,Integer] -> Wallet () 
+-- sendMoney os add = do 
+--     rs <- utxos 
+--     let bal = sumRevenue rs
+--         val = sum [ _value o | o <- os ]
+--     if bal < val 
+--         then throwError $ WalletNotEnoughBalanceError "You don't have enough balance"
+--         else let (is,rs') = spendUtxos val rs
+--              -- type of UTXO will need to be changed to (TrxHash, Int index, TrxOutput)

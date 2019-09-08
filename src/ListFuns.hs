@@ -4,11 +4,13 @@ module ListFuns
     ,   rejectIdxs
     ,   splitGroupedKV
     ,   hasNoDups
+    ,   flattenKeyVal
     ) where 
 
 import qualified Data.Set as Set
 import Data.List
 import Control.Exception
+import Control.Monad
 
 selectIdxs :: [Int] -> [a] -> [a]
 selectIdxs idxs ys = f (sort idxs) ([0..] `zip` ys) where 
@@ -39,3 +41,6 @@ hasNoDups = loop Set.empty
                     = loop s' xs
                     | otherwise
                     = False
+
+flattenKeyVal :: [(a,[b])] -> [(a,b)]
+flattenKeyVal ps = join [ [ (x,y) | y <- ys ] | (x,ys) <- ps ]
