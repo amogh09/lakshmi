@@ -17,7 +17,9 @@ module Trx
     ,   userUtxos
     ,   spendUtxos
     ,   TrxHash
+    ,   TrxHashMap
     ,   sumUtxos
+    ,   UTXO
     ) where
 
 import qualified Data.Serialize as S

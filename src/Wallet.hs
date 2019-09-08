@@ -80,25 +80,36 @@ liftTrxDbFileBased d = do
 trxHasher :: Trx -> TrxHash
 trxHasher = A.encode58 . trxHash S.encode
 
--- utxos :: Wallet [Revenue]
--- utxos = do 
---     n <- liftUserDb getUserSeqNum
---     ts <- liftTrxDbFileBased readModel
---     cs <- liftWalletCryptoDSA $ addresses n
---     let as = Set.fromList . fmap A.encode58 $ cs
---     userUtxos trxHasher as $ ts
+trxs :: Wallet TrxHashMap
+trxs = liftTrxDbFileBased readModel >>= pure . toTrxHashMap trxHasher
 
--- checkBalance :: Wallet Integer 
--- checkBalance = do 
---     rs <- utxos
---     pure . sumRevenue $ rs
+getUtxos :: TrxHashMap -> Wallet [UTXO]
+getUtxos m = do 
+    n  <- liftUserDb getUserSeqNum    
+    cs <- liftWalletCryptoDSA $ addresses n
+    let as = Set.fromList . fmap A.encode58 $ cs
+    pure . userUtxos m as $ m
 
--- sendMoney :: [LakshmiAddress,Integer] -> Wallet () 
--- sendMoney os add = do 
---     rs <- utxos 
---     let bal = sumRevenue rs
---         val = sum [ _value o | o <- os ]
---     if bal < val 
---         then throwError $ WalletNotEnoughBalanceError "You don't have enough balance"
---         else let (is,rs') = spendUtxos val rs
---              -- type of UTXO will need to be changed to (TrxHash, Int index, TrxOutput)
+checkBalance :: Wallet Integer 
+checkBalance = do 
+    m  <- trxs
+    xs <- getUtxos m
+    pure . sumUtxos m $ xs
+
+sendMoney :: [(LakshmiAddress,Integer)] -> Wallet Trx
+sendMoney ys = do 
+    m  <- trxs
+    xs <- getUtxos m
+    let bal = sumUtxos m xs
+        os  = fmap (uncurry . flip $ TrxOutput) ys
+        val = sum . fmap _value $ os
+    if bal < val 
+        then throwError $ WalletNotEnoughBalanceError "You don't have enough balance"
+        else let (ls,rs) = spendUtxos m val xs
+                 change  = sumUtxos m ls - val
+             in  if change > 0 
+                    then do 
+                        c <- newAddress
+                        let co = TrxOutput change c
+                        pure  . Trx 0 ls $ co:os
+                    else pure . Trx 0 ls $ os
