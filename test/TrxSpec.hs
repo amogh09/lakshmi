@@ -90,16 +90,21 @@ spec = do
                 i1' = TrxInput "h1" 2 
             in  groupInputsByPrevHash [i1,i2,i1'] == [("h1",[i1,i1']), ("h2", [i2])]
 
-    -- describe "filterUserRevenue" $ do 
-    --     it "selects user's revenue correctly" $ 
-    --         let o1 = TrxOutput 10 "o1"
-    --             o2 = TrxOutput 20 "o2"
-    --             o3 = TrxOutput 30 "o3"
-    --             o4 = TrxOutput 40 "o4"
-    --             rs = [("1",[o1,o2]), ("2",[o3,o4])]
-    --             as = Set.fromList ["o2","o3"]
-    --             m  = toTrxHashMap ts
-    --         in  filterUserRevenue m as rs == [("1",[o2]),("2",[o3])]
+    describe "filterUserRevenue" $ do 
+        it "selects user's revenue correctly" $ 
+            let o1 = TrxOutput 10 "o1"
+                o2 = TrxOutput 20 "o2"
+                o3 = TrxOutput 30 "o3"
+                o4 = TrxOutput 40 "o4"
+                t1 = Trx 0 [] [o1,o2]
+                t2 = Trx 0 [] [o3,o4]
+                hashFun t 
+                    | t == t1 = "1"
+                    | t == t2 = "2"
+                m  = toTrxHashMap hashFun [t1,t2]
+                xs = utxos m
+                as = Set.fromList ["o2","o3"]
+            in  filterUserRevenue m as xs == [TrxInput "1" 1,TrxInput "2" 0]
 
     describe "sumRevenue" $ do 
         it "sums outputs of all revenues correctly" $ 
