@@ -13,6 +13,7 @@ import qualified AddressEncoder as A
 import Trx
 import WalletCryptoClass
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 
 data WalletEnv = WalletEnv {  
         userDbFileBasedEnv :: UserDbFileBasedEnv
@@ -96,16 +97,19 @@ checkBalance = do
     xs <- getUtxos m
     pure . sumUtxos m $ xs
 
-sendMoney :: [(LakshmiAddress,Integer)] -> Wallet Trx
-sendMoney ys = do 
-    m  <- trxs
+pushTrx :: TrxHashMap -> Trx -> Wallet ()
+pushTrx m t = let m' = Map.insert (trxHasher t) t m
+              in  liftTrxDbFileBased . writeModel . fromTrxHashMap $ m'
+
+generateTrx :: TrxHashMap -> [(LakshmiAddress,Integer)] -> Wallet Trx
+generateTrx m ys = do 
     xs <- getUtxos m
     let bal = sumUtxos m xs
         os  = fmap (uncurry . flip $ TrxOutput) ys
         val = sum . fmap _value $ os
     if bal < val 
         then throwError $ WalletNotEnoughBalanceError "You don't have enough balance"
-        else let (ls,rs) = spendUtxos m val xs
+        else let (ls,_) = spendUtxos m val xs
                  change  = sumUtxos m ls - val
              in  if change > 0 
                     then do 
@@ -113,3 +117,9 @@ sendMoney ys = do
                         let co = TrxOutput change c
                         pure  . Trx 0 ls $ co:os
                     else pure . Trx 0 ls $ os
+
+sendMoney :: [(LakshmiAddress,Integer)] -> Wallet ()
+sendMoney ys = do
+    m <- trxs
+    t <- generateTrx m ys 
+    pushTrx m t
