@@ -5,9 +5,7 @@ module Trx
         LakshmiAddress
     ,   Trx (..)
     ,   TrxInput (..)
-    ,   TrxOutput (..)
-    ,   revenue
-    ,   sumOutputValues
+    ,   TrxOutput (..)    
     ,   toTrxHashMap
     ,   fromTrxHashMap
     ,   utxos
@@ -15,11 +13,11 @@ module Trx
     ,   groupInputsByPrevHash
     ,   selectIdxs
     ,   rejectIdxs
-    ,   filterUserRevenue
+    ,   filterUserUtxos
     ,   userUtxos
-    ,   sumRevenue
     ,   spendUtxos
     ,   TrxHash
+    ,   sumUtxos
     ) where
 
 import qualified Data.Serialize as S
@@ -51,8 +49,6 @@ data Trx = Trx {
 
 type TrxHashMap = Map.Map TrxHash Trx
 
-type Revenue = (TrxHash, [TrxOutput])
-
 type UTXO = TrxInput
 
 fromTrxHashMap :: TrxHashMap -> [Trx]
@@ -60,15 +56,6 @@ fromTrxHashMap = fmap snd . Map.toList
 
 toTrxHashMap :: (Trx -> TrxHash) -> [Trx] -> TrxHashMap
 toTrxHashMap trxHashFun ts = Map.fromList $ ts >>= \t -> return (trxHashFun t, t)
-
-revenue :: Set.Set LakshmiAddress -> [Trx] -> [TrxOutput]
-revenue as    = foldr f [] where 
-    f t os    = let os' = _outputs t
-                in  filter myRevenue os' ++ os 
-    myRevenue = flip Set.member as . _address
-
-sumOutputValues :: [TrxOutput] -> Integer 
-sumOutputValues os = sum (os >>= return . _value)
 
 groupInputsByPrevHash :: [TrxInput] -> [(TrxHash,[TrxInput])]
 groupInputsByPrevHash is = 
@@ -88,26 +75,24 @@ utxos m     = fmap (uncurry TrxInput) (ls' ++ rs') where
     ls'      = flattenKeyVal . Map.toList . fmap (\t -> [0..length (_outputs t)-1]) $ ls 
     rs'      = flattenKeyVal . Map.toList $ rs
 
-utxoAddress :: TrxHashMap -> UTXO -> LakshmiAddress
-utxoAddress m x = _address o where 
+utxoData :: TrxHashMap -> UTXO -> TrxOutput
+utxoData m x = _outputs t !! _index x where 
     t = m Map.! (_prevTrx x) 
-    o = _outputs t !! _index x
 
-filterUserRevenue :: TrxHashMap -> Set.Set LakshmiAddress -> [UTXO] -> [UTXO]
-filterUserRevenue m as = filter (flip Set.member as . utxoAddress m)
+filterUserUtxos :: TrxHashMap -> Set.Set LakshmiAddress -> [UTXO] -> [UTXO]
+filterUserUtxos m as = filter (flip Set.member as . _address . utxoData m)
 
 userUtxos :: TrxHashMap -> Set.Set LakshmiAddress -> TrxHashMap -> [UTXO]
-userUtxos m as = filterUserRevenue m as . utxos 
+userUtxos m as = filterUserUtxos m as . utxos 
 
-sumRevenue :: [Revenue] -> Integer 
-sumRevenue rs = sumOutputValues . join $ [ os | (_,os) <- rs ]
+spendUtxos :: TrxHashMap -> Integer -> [UTXO] -> ([UTXO],[UTXO])
+spendUtxos m v [] = ([],[])
+spendUtxos m v (x:xs)
+    | v <= 0      = ([],x:xs)
+    | otherwise   = 
+        let (ls,rs) = spendUtxos m (v-vi) xs
+            vi      = _value . flip (!!) (_index x) . _outputs . (Map.!) m . _prevTrx $ x
+        in  (x:ls,rs)
 
-flattenRevenue :: [Revenue] -> [(TrxHash,TrxOutput)]
-flattenRevenue rs = join [ [ (h,o) | o <- os ] | (h,os) <- rs ] 
-
-spendUtxos :: Integer -> [Revenue] -> ([(TrxHash,TrxOutput)],[Revenue])
-spendUtxos x rs     = (reverse rs', drop (length rs') rs) where 
-    rs'             = snd . foldl f (0,[]) . flattenRevenue $ rs 
-    f (x',ps) (h,o)
-        | x' >= x   = (x',ps)
-        | otherwise = (x' + _value o, (h,o):ps)
+sumUtxos :: TrxHashMap -> [UTXO] -> Integer 
+sumUtxos m = sum . fmap _value . fmap (utxoData m)

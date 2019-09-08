@@ -17,19 +17,6 @@ trxHasher = A.encode58 . trxHash S.encode
 
 spec :: Spec 
 spec = do 
-    describe "revenue" $ do 
-        it "collects user's revenue correctly" $ 
-            let o1  = TrxOutput 10 "a"
-                o2  = TrxOutput 20 "b"
-                o3  = TrxOutput 30 "c"
-                ts  = [Trx 1 [] [o1, o2], Trx 2 [] [o3]]
-                as  = Set.fromList ["a", "c"]
-                res = revenue as ts 
-            in  res == [o1, o3]
-
-        it "returns a revenue less than or equal to all output values" $ do
-            property $ \(ts,as) -> sumOutputValues (revenue as ts) <= sumOutputValues (ts >>= _outputs)
-
     describe "fromTrxHashMap" $ do
         it "returns the input to toTrxHashmap" $ do 
             property $ 
@@ -90,7 +77,7 @@ spec = do
                 i1' = TrxInput "h1" 2 
             in  groupInputsByPrevHash [i1,i2,i1'] == [("h1",[i1,i1']), ("h2", [i2])]
 
-    describe "filterUserRevenue" $ do 
+    describe "filterUserUtxos" $ do 
         it "selects user's revenue correctly" $ 
             let o1 = TrxOutput 10 "o1"
                 o2 = TrxOutput 20 "o2"
@@ -104,19 +91,19 @@ spec = do
                 m  = toTrxHashMap hashFun [t1,t2]
                 xs = utxos m
                 as = Set.fromList ["o2","o3"]
-            in  filterUserRevenue m as xs == [TrxInput "1" 1,TrxInput "2" 0]
+            in  filterUserUtxos m as xs == [TrxInput "1" 1,TrxInput "2" 0]
 
-    describe "sumRevenue" $ do 
-        it "sums outputs of all revenues correctly" $ 
-                let o1 = TrxOutput 10 "o1"
-                    o2 = TrxOutput 20 "o2"
-                    o3 = TrxOutput 30 "o3"
-                    o4 = TrxOutput 40 "o4"
-                    rs = [("1",[o1,o2]), ("2",[o3,o4])]
-                in  sumRevenue rs == 10 + 20 + 30 + 40
-
-    describe "sumOutputValues" $ do 
-        it "sums the values of all given outputs correctly" $ 
-            property $ \vs -> 
-                let os = [ TrxOutput v "" | v <- vs ]
-                in  sumOutputValues os == sum vs
+    describe "sumUtxos" $ do 
+        it "sums values of outputs corresponding to UTXOs" $ 
+            let o1 = TrxOutput 10 "o1"
+                o2 = TrxOutput 20 "o2"
+                o3 = TrxOutput 30 "o3"
+                o4 = TrxOutput 40 "o4"
+                t1 = Trx 0 [] [o1,o2]
+                t2 = Trx 0 [] [o3,o4]
+                hashFun t 
+                    | t == t1 = "1"
+                    | t == t2 = "2"
+                m  = toTrxHashMap hashFun [t1,t2]
+                xs = utxos m 
+            in  sumUtxos m xs == 10 + 20 + 30 + 40
