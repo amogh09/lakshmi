@@ -9,7 +9,15 @@ import System.Random
 import Data.Word
 import qualified Data.ByteString as BS 
 import Crypto.Hash
-import Debug.Trace
+import qualified Data.Vector as V
+import MonadFileRepoClass
+import Data.List (intercalate)
+
+seedPhrase :: WordList -> Extension -> Entropy -> Either String Mnemonic 
+seedPhrase wl ext ent = do 
+    is <- seedPhraseIndices 11 ent
+    let m = (ext:) . getMnemonicWords wl $ is 
+    pure $ toMnemonic seedPhraseDelim m
 
 randomWord8s :: (RandomGen g) => g -> Int -> ([Word8],g)
 randomWord8s g n
@@ -22,7 +30,7 @@ seedPhraseIndices :: BitSize -> Entropy -> Either String WordIndices
 seedPhraseIndices wlsl2 ent
     | entBytes < 16 = Left $ "Entropy must be at least 16 bytes long - provided " ++ show entBytes ++ " bytes only."
     | r /= 0        = Left $ "Entropy size must be divisible by 4 - provided " ++ show entBytes ++ " bytes."
-    | otherwise     = traceShow (fmap toInteger . BS.unpack $ entcs) $ Right $ wordIndices wlsl2 entcs where
+    | otherwise     = Right $ wordIndices wlsl2 entcs where
     entBytes   = BS.length ent     
     (csBits,r) = entBytes `quotRem` 4
     entDgst    = BA.convert . hashWith SHA256 $ ent
@@ -43,6 +51,11 @@ takeBits n s
 type Entropy = BS.ByteString
 type BitSize = Int
 type WordIndices = [Int]
+type WordList = V.Vector String
+type Words = [String]
+type Mnemonic = String
+type Extension = String
+type Delimiter = String
 
 wordSize :: Int
 wordSize = 8
@@ -53,3 +66,15 @@ wordIndices wlsl2 n = fmap fromIntegral . reverse . f q . (`shiftR` r) . bytesTo
         wls   = 2^wlsl2 
         f 0 _ = [] 
         f i m = (m `mod` wls) : f (i-1) (m `shiftR` wlsl2)
+
+getMnemonicWords :: WordList -> WordIndices -> Words
+getMnemonicWords ws = fmap (ws V.!)
+ 
+seedPhraseDelim :: Delimiter
+seedPhraseDelim = "-"
+
+toMnemonic :: Delimiter -> Words -> Mnemonic
+toMnemonic = intercalate
+
+loadWordList :: (MonadFileRepo m) => FilePath -> m WordList 
+loadWordList p = readString p >>= pure . lines >>= pure . V.fromList

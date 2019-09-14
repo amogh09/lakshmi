@@ -5,6 +5,9 @@ import Test.Hspec
 import Test.QuickCheck    
 import qualified Data.ByteString as BS 
 import WalletCryptoClass
+import qualified Data.Vector as V
+import MockFileRepo
+import Control.Monad.State
 
 type Binary = String 
 
@@ -50,3 +53,20 @@ spec = do
         it "extracts bits from the bytestring" $ 
             let bs = toByteString ["11010110","10011011","10101101"]                
             in  takeBits 14 bs == toByteString ["11010110","10011000"]
+
+    describe "loadWordList" $ do 
+        it "reads lines from file and converts to a vector of strings" $ 
+            let ws  = ["abandon","ability","able","about","above","absent","absorb"]
+                p   = "path"
+                dir = SingleFile p . unlines $ ws
+                r   = evalState (loadWordList p) dir
+            in  r == V.fromList ws
+
+    describe "getMnemonicWords" $ do 
+        it "extracts words at given indices from a word-list" $ 
+            let ws = V.fromList ["abandon","ability","able","about","above","absent","absorb"]
+            in  getMnemonicWords ws [0,2,3] == ["abandon","able","about"]
+
+    describe "toMnemonic" $ do 
+        it "strings together words to form a seedphrase" $ 
+            toMnemonic "-" ["abandon","able","about"] == "abandon-able-about"

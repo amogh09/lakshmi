@@ -6,7 +6,7 @@ module MockFileRepo
     ) where 
 
 import Control.Exception
-import ModelDbFileBased 
+import MonadFileRepoClass
 import Control.Monad.State
 import qualified Data.ByteString.UTF8 as BU
 import qualified Data.Serialize as S
@@ -17,20 +17,24 @@ data MockDir = EmptyDir
 
 instance Exception [Char]
 
-instance MonadFileRepo (State MockDir) where
-    writeBytes path contents = put (SingleFile path . BU.toString $ contents)
+readStr :: FilePath -> State MockDir String 
+readStr p = do 
+    dir <- get 
+    case dir of 
+        EmptyDir -> throw "File does not exist"
+        SingleFile p' contents -> 
+            if p == p' 
+                then pure contents
+                else throw "File does not exist" 
 
-    readBytes path = do 
-        dir <- get 
-        case dir of 
-            EmptyDir -> throw "File does not exist"
-            SingleFile path' contents -> 
-                if path == path' 
-                    then return . BU.fromString $ contents 
-                    else throw "File does not exist"
+instance MonadFileRepo (State MockDir) where
+    writeBytes path contents = put (SingleFile path . BU.toString $ contents)    
 
     fileExists path = do 
         dir <- get 
         case dir of 
             EmptyDir           -> return False 
             SingleFile path' _ -> return $ path == path'
+
+    readString = readStr
+        

@@ -56,3 +56,4 @@ instance (MonadFileRepo m) => MonadModelDb (ModelDbFileBased m) where
                     Left s  -> throwError s
                     Right x -> return x 
             else throwError $ "File " ++ path ++ " does not exist."
+    
