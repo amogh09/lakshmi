@@ -35,6 +35,7 @@ dependencies:
 - QuickCheck
 - containers
 - random
+- optparse-applicative
 
 library:
   source-dirs: src
