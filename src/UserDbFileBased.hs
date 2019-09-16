@@ -50,7 +50,7 @@ catchUserIO env = catchIO (UserDbErrorIO env)
 
 handleUserDbError :: UserDbError -> String 
 handleUserDbError (UserDbErrorIO env e) 
-    | isDoesNotExistErrorType (ioeGetErrorType e) = "User not registered."
+    | isDoesNotExistErrorType (ioeGetErrorType e) = "Provided seed-phrase not recognized. Please provide a valid seed-phrase."
     | otherwise                                   = "Database Error: " ++ (show e)
 handleUserDbError (UserDbErrorStr _ s)            = s
 

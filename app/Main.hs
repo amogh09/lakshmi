@@ -6,10 +6,14 @@ import Data.Semigroup ((<>))
 import System.IO
 import System.Environment
 import Debug.Trace
+import Trx
+import ListFuns
+import TupleFuns
 
 data Command = 
         Show ShowCommand
     |   Gen GenCommand
+    |   Send [(LakshmiAddress,Integer)]
     deriving (Show)
 
 data ShowCommand = 
@@ -17,7 +21,10 @@ data ShowCommand =
     |   Address Int
     deriving (Show)
 
-data GenCommand = User deriving (Show)
+data GenCommand = 
+        User 
+    |   GenAddress
+        deriving (Show)
 
 showParser :: Parser Command 
 showParser = hsubparser
@@ -39,27 +46,46 @@ showParser = hsubparser
 genParser :: Parser Command 
 genParser = hsubparser
     (
-        command "user" (info genUserParser (progDesc "Generates new user."))
+        command "user"    (info genUserParser    (progDesc "Generates new user."))
+    <>  command "address" (info genAddressParser (progDesc "Generate a new Lakshmi address. This address is used to receive coins."))
     ) where 
-        genUserParser = pure (Gen User)
-            
+        genUserParser    = pure (Gen User)
+        genAddressParser = pure (Gen GenAddress)
+
+sendParser :: Parser Command 
+sendParser = Send <$> fmap (mapSnd read . parsePair) <$> some
+    (argument str 
+        (
+            metavar "<pairs>..."              
+        <>  help "Address and coins pairs in the format <address>=<integer>"
+        )
+    )
+
 parser :: Parser Command 
 parser = hsubparser
     (
         command "show" (info showParser (progDesc "Command to display various information about your Wallet. See 'show -h' for details."))
-   <>   command "gen"  (info genParser  (progDesc "Command to generate various entities."))
+    <>  command "gen"  (info genParser  (progDesc "Command to generate various entities."))
+    <>  command "send" (info sendParser (progDesc "Send coins to one or more addresses."))
     )
 
 askSeedPhrase :: IO String 
-askSeedPhrase = prompt "Enter your seed-phrase: "
+askSeedPhrase = prompt "Enter your seed-phrase: " -- TODO: Use password mode to prevent printing seed-phrase on console
+
+prepareEnv :: IO WalletEnv
+prepareEnv = do 
+    s    <- askSeedPhrase
+    home <- getEnv "HOME"
+    pure . mkDefaultEnv home $ s
+
+printErrorOrResult :: Either WalletError String -> IO ()
+printErrorOrResult (Right r) = putStrLn r 
+printErrorOrResult (Left  e) = putStrLn ("Error: " ++ show e)
 
 run :: Command -> IO ()
 run (Show Balance) = do 
-    s    <- askSeedPhrase
-    home <- getEnv "HOME"
-    let env = mkDefaultEnv home s 
-    res  <- either show id <$> runWallet env checkBalance
-    putStrLn res
+    env <- prepareEnv
+    runWallet env checkBalance >>= printErrorOrResult
 run (Gen User) = do
     s <- genSeedPhrase
     (case s of 
@@ -69,6 +95,12 @@ run (Gen User) = do
             let env = mkDefaultEnv home s
             r    <- either show id <$> runWallet env registerUser 
             putStrLn r)
+run (Gen GenAddress) = do 
+    env <- prepareEnv
+    runWallet env newAddress >>= printErrorOrResult
+run (Send kvs) = do 
+    env  <- prepareEnv
+    runWallet env (sendCoins kvs) >>= printErrorOrResult
 
 main :: IO ()
 main = run =<< execParser opts where 

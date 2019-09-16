@@ -36,6 +36,7 @@ dependencies:
 - containers
 - random
 - optparse-applicative
+- split
 
 library:
   source-dirs: src

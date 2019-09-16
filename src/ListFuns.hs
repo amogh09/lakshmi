@@ -5,12 +5,14 @@ module ListFuns
     ,   splitGroupedKV
     ,   hasNoDups
     ,   flattenKeyVal
+    ,   parsePair
     ) where 
 
 import qualified Data.Set as Set
 import Data.List
 import Control.Exception
 import Control.Monad
+import Data.List.Split
 
 selectIdxs :: [Int] -> [a] -> [a]
 selectIdxs idxs ys = f (sort idxs) ([0..] `zip` ys) where 
@@ -44,3 +46,7 @@ hasNoDups = loop Set.empty
 
 flattenKeyVal :: [(a,[b])] -> [(a,b)]
 flattenKeyVal ps = join [ [ (x,y) | y <- ys ] | (x,ys) <- ps ]
+
+-- parses string of format key=val and returns a pair (kev,val)
+parsePair :: String -> (String,String)
+parsePair s = let [addr,val] = splitOn "=" s in (addr,val)

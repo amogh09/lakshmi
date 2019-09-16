@@ -154,8 +154,10 @@ generateTrx m ys = do
                         pure  . Trx 0 ls $ co:os
                     else pure . Trx 0 ls $ os
 
-sendMoney :: [(LakshmiAddress,Integer)] -> Wallet ()
-sendMoney ys = do
+sendCoins :: [(LakshmiAddress,Integer)] -> Wallet String
+sendCoins ys = do
     m <- trxs
     t <- generateTrx m ys 
     pushTrx m t
+    pure "Transaction published successfully."
+    `catchError` handleError
