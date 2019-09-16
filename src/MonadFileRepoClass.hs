@@ -20,6 +20,6 @@ class Monad m => MonadFileRepo m where
 
 instance MonadFileRepo IO where 
     writeBytes = BS.writeFile
-    readBytes = BS.readFile
+    readBytes  = BS.readFile
     fileExists = doesFileExist
     readString = readFile

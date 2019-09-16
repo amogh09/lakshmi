@@ -15,6 +15,8 @@ module ModelDbFileBased
     ,   fileExists
     ,   ModelDbFileBased
     ,   runModelDbFileBased
+    ,   ModelDbFileBasedError (..)
+    ,   liftModelDbError
     ) where
 
 import ModelDbClass
@@ -24,18 +26,25 @@ import Data.Serialize (encode, decode)
 import MonadFileRepoClass
 
 newtype ModelDbFileBased m a = ModelDbFileBased {
-        unModelDbFileBased :: ReaderT FilePath (ExceptT String m) a
+        unModelDbFileBased :: ReaderT FilePath (ExceptT ModelDbFileBasedError m) a
     } deriving 
     (
         Functor
     ,   Applicative
     ,   Monad
     ,   MonadReader FilePath
-    ,   MonadError String
+    ,   MonadError ModelDbFileBasedError    
     )
 
-runModelDbFileBased :: FilePath -> ModelDbFileBased m a -> m (Either String a)
+runModelDbFileBased :: FilePath -> ModelDbFileBased m a -> m (Either ModelDbFileBasedError a)
 runModelDbFileBased env x = runExceptT (runReaderT (unModelDbFileBased x) env)
+
+data ModelDbFileBasedError = ModelFileDoesNotExist FilePath
+                           | ModelDbFileBasedError String
+                           deriving (Show)
+
+liftModelDbError :: ModelDbFileBasedError -> String 
+liftModelDbError = show
 
 instance MonadTrans ModelDbFileBased where 
     lift = ModelDbFileBased . lift . lift
@@ -53,7 +62,7 @@ instance (MonadFileRepo m) => MonadModelDb (ModelDbFileBased m) where
             then do 
                 bytes <- lift $ readBytes path 
                 case decode bytes of 
-                    Left s  -> throwError s
+                    Left s  -> throwError (ModelDbFileBasedError s)
                     Right x -> return x 
-            else throwError $ "File " ++ path ++ " does not exist."
+            else throwError . ModelFileDoesNotExist $ path
     

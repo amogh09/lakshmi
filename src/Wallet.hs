@@ -14,11 +14,15 @@ import Trx
 import WalletCryptoClass
 import qualified Data.Set as Set
 import qualified Data.Map as Map
+import System.Directory
+import System.FilePath
+import User
 
 data WalletEnv = WalletEnv {  
-        userDbFileBasedEnv :: UserDbFileBasedEnv
+        workDir              :: FilePath
+    ,   userDbFileBasedEnv   :: UserDbFileBasedEnv
     ,   walletCryptoECDSAEnv :: WalletCryptoECDSAEnv
-    ,   trxDbFileBasedEnv :: FilePath
+    ,   trxDbFileBasedEnv    :: FilePath
     } deriving (Show)
 
 data WalletError = WalletUserDbError UserDbError 
@@ -39,8 +43,18 @@ newtype Wallet a = Wallet {
     ,   MonadError WalletError
     )
 
+mkDefaultEnv :: SeedPhrase -> WalletEnv 
+mkDefaultEnv s = WalletEnv wd userDbEnv cryptoEnv trxEnv where 
+    wd         = "~/.lakshmi"
+    userId     = toUserId s
+    userDbEnv  = UserDbFileBasedEnv wd userId
+    cryptoEnv  = WalletCryptoECDSAEnv s 
+    trxEnv     = wd </> "trx.db"
+
 runWallet :: WalletEnv -> Wallet a -> IO (Either WalletError a) 
-runWallet e w = runReaderT (runExceptT (unWallet w)) e
+runWallet e w = do
+    createDirectoryIfMissing True (workDir e)
+    runReaderT (runExceptT (unWallet w)) e
 
 liftUserDb :: UserDbFileBased a -> Wallet a 
 liftUserDb u = do 
@@ -76,26 +90,31 @@ liftTrxDbFileBased :: ModelDbFileBased IO a -> Wallet a
 liftTrxDbFileBased d = do 
     p <- asks trxDbFileBasedEnv
     r <- liftIO $ runModelDbFileBased p d
-    either (throwError . WalletModelDbError) pure $ r
+    either (throwError . WalletModelDbError . liftModelDbError) pure $ r
 
 trxHasher :: Trx -> TrxHash
 trxHasher = A.encode58 . trxHash S.encode
 
 trxs :: Wallet TrxHashMap
-trxs = liftTrxDbFileBased readModel >>= pure . toTrxHashMap trxHasher
+trxs = liftTrxDbFileBased $ do 
+    ts <- readModel `catchError` cf 
+    pure . toTrxHashMap trxHasher $ ts
+    where 
+        cf (ModelFileDoesNotExist _) = pure []
 
 getUtxos :: TrxHashMap -> Wallet [UTXO]
 getUtxos m = do 
-    n  <- liftUserDb getUserSeqNum    
+    n  <- liftUserDb getUserSeqNum
     cs <- liftWalletCryptoDSA $ addresses n
     let as = Set.fromList . fmap A.encode58 $ cs
     pure . userUtxos m as $ m
 
-checkBalance :: Wallet Integer 
+checkBalance :: Wallet String 
 checkBalance = do 
     m  <- trxs
     xs <- getUtxos m
-    pure . sumUtxos m $ xs
+    pure . show . sumUtxos m $ xs
+    `catchError` handleError
 
 pushTrx :: TrxHashMap -> Trx -> Wallet ()
 pushTrx m t = let m' = Map.insert (trxHasher t) t m

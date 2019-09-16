@@ -8,8 +8,10 @@ module WalletCryptoECDSA
     ,   MonadWalletCrytpo (..)
     ,   WalletCryptoECDSAEnv (..)
     ,   CryptoError
+    ,   SeedPhrase
     ) where
 
+import CryptoFuns
 import WalletCryptoClass
 import Control.Monad.Reader
 import Control.Monad.Except
@@ -21,8 +23,10 @@ import Crypto.Hash
 import Numeric (showHex)
 
 data WalletCryptoECDSAEnv = WalletCryptoECDSAEnv {
-        passPhrase :: String
+        seedPhrase :: SeedPhrase
     } deriving (Show)
+
+type SeedPhrase = String
 
 curve :: Curve    
 curve = getCurveByName SEC_p256k1
@@ -47,7 +51,7 @@ handleWalletCryptoError (CryptoError e) = e
 instance MonadWalletCrytpo WalletCryptoECDSA where 
     generateAddress suffix = do 
         env <- ask
-        let privKeySeed = hashWith hashFun . BU.fromString $ passPhrase env ++ suffix
+        let privKeySeed = hashWith hashFun . BU.fromString $ seedPhrase env ++ suffix
             privKey     = ECDSA.PrivateKey curve . bytesToInteger $ privKeySeed
             pubPoint    = generateQ curve (ECDSA.private_d privKey) 
         pure . strToCryptoAddress . showPublicPoint $ pubPoint

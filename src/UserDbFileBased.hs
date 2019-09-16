@@ -33,7 +33,7 @@ newtype UserDbFileBased a = UserDbFileBased {
 
 data UserDbFileBasedEnv = UserDbFileBasedEnv {
         workingDirectory :: FilePath
-    ,   user :: String
+    ,   user             :: String
     } deriving (Show)
 
 data UserDbError = UserDbErrorIO UserDbFileBasedEnv IOException
@@ -50,7 +50,7 @@ catchUserIO env = catchIO (UserDbErrorIO env)
 
 handleUserDbError :: UserDbError -> String 
 handleUserDbError (UserDbErrorIO env e) 
-    | isDoesNotExistErrorType (ioeGetErrorType e) = "Current user '" ++ user env ++ "' has not been registered."
+    | isDoesNotExistErrorType (ioeGetErrorType e) = "User not registered."
     | otherwise                                   = "Database Error: " ++ (show e)
 handleUserDbError (UserDbErrorStr _ s)            = s
 
@@ -70,3 +70,5 @@ instance MonadUserDb UserDbFileBased where
         case exists of 
             True -> throwError . UserDbErrorStr env $ "This user has already been registered."
             False -> catchUserIO env $ withFile path WriteMode (`hPutStrLn` "1")
+
+    userExists = ask >>= liftIO . doesFileExist . workDir 

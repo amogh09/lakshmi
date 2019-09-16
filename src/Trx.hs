@@ -69,7 +69,7 @@ txis :: TrxHashMap -> [TrxInput]
 txis m = Map.toList m >>= \(_,t) -> _inputs t
 
 utxos :: TrxHashMap -> [UTXO]
-utxos m     = fmap (uncurry TrxInput) (ls' ++ rs') where 
+utxos m      = fmap (uncurry TrxInput) (ls' ++ rs') where 
     ls       = m `Map.difference` inputMap 
     rs       = Map.intersectionWith f m inputMap 
     inputMap = fmap (fmap _index) . Map.fromList . groupInputsByPrevHash . txis $ m

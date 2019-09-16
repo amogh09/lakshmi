@@ -1,10 +1,9 @@
 module Main where
 
 import Wallet
-import UserDbFileBased 
-import WalletCryptoECDSA 
 import Options.Applicative
 import Data.Semigroup ((<>))
+import System.IO
 
 data Command = 
     Show ShowCommand
@@ -42,13 +41,21 @@ parser = hsubparser
         command "show" (info showParser (progDesc "Used to display various information about your Wallet. See 'show -h' for details."))
     )
 
+prompt :: String -> IO String 
+prompt s = do 
+    putStr s 
+    hFlush stdout 
+    getLine
+
+askSeedPhrase :: IO String 
+askSeedPhrase = prompt "Enter your seed-phrase: "
+
 run :: Command -> IO ()
-run (Show Balance) = 
-    let userDbEnv  = UserDbFileBasedEnv "/tmp/lakshmi" "user"
-        cryptoEnv  = WalletCryptoECDSAEnv "passphrase"
-        trxDbEnv   = "/tmp/lakshmi/trx.db"
-        env        = WalletEnv userDbEnv cryptoEnv trxDbEnv
-    in  either show show <$> runWallet env checkBalance >>= putStrLn
+run (Show Balance) = do 
+    s <- askSeedPhrase
+    let env = mkDefaultEnv s 
+    res <- either show show <$> runWallet env checkBalance
+    putStrLn res
 
 main :: IO ()
 main = run =<< execParser opts where 

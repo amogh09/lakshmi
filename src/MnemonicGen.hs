@@ -2,7 +2,6 @@
 
 module MnemonicGen where 
 
-import WalletCryptoClass
 import Data.Bits (shiftR,complement,shiftL,(.&.))
 import qualified Data.ByteArray as BA
 import System.Random
@@ -12,6 +11,7 @@ import Crypto.Hash
 import qualified Data.Vector as V
 import MonadFileRepoClass
 import Data.List (intercalate)
+import CryptoFuns
 
 seedPhrase :: WordList -> Extension -> Entropy -> Either String Mnemonic 
 seedPhrase wl ext ent = do 
