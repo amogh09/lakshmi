@@ -17,6 +17,8 @@ import qualified Data.Map as Map
 import System.Directory
 import System.FilePath
 import User
+import System.IO
+import MnemonicGen
 
 data WalletEnv = WalletEnv {  
         workDir              :: FilePath
@@ -43,9 +45,9 @@ newtype Wallet a = Wallet {
     ,   MonadError WalletError
     )
 
-mkDefaultEnv :: SeedPhrase -> WalletEnv 
-mkDefaultEnv s = WalletEnv wd userDbEnv cryptoEnv trxEnv where 
-    wd         = "~/.lakshmi"
+mkDefaultEnv :: FilePath -> SeedPhrase -> WalletEnv 
+mkDefaultEnv home s = WalletEnv wd userDbEnv cryptoEnv trxEnv where 
+    wd         = home </> ".lakshmi"
     userId     = toUserId s
     userDbEnv  = UserDbFileBasedEnv wd userId
     cryptoEnv  = WalletCryptoECDSAEnv s 
@@ -80,10 +82,25 @@ newAddress = do
     pure . encode58 $ addr
     `catchError` handleError
 
+prompt :: String -> IO String 
+prompt s = do 
+    putStr s 
+    hFlush stdout 
+    getLine
+
+genSeedPhrase :: IO (Either String String)
+genSeedPhrase = do 
+    ext      <- prompt "Enter an extension to the seed-phrase: "
+    wordList <- loadWordList "wordlist.txt"
+    ent      <- genEntropy
+    pure $ getSeedPhrase wordList ext ent    
+
 registerUser :: Wallet String
 registerUser = do 
     liftUserDb initUser 
-    pure "User registered successfully."
+    e <- ask 
+    let s = seedPhrase . walletCryptoECDSAEnv $ e
+    pure $ "User registered successfully.\nSeed phrase is: " ++ s
     `catchError` handleError
 
 liftTrxDbFileBased :: ModelDbFileBased IO a -> Wallet a 

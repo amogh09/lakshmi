@@ -1,6 +1,11 @@
 -- Implements BIP39 mnemonic phase standard
 
-module MnemonicGen where 
+module MnemonicGen 
+    (
+        getSeedPhrase
+    ,   loadWordList
+    ,   genEntropy 
+    ) where 
 
 import Data.Bits (shiftR,complement,shiftL,(.&.))
 import qualified Data.ByteArray as BA
@@ -13,12 +18,6 @@ import MonadFileRepoClass
 import Data.List (intercalate)
 import CryptoFuns
 
-seedPhrase :: WordList -> Extension -> Entropy -> Either String Mnemonic 
-seedPhrase wl ext ent = do 
-    is <- seedPhraseIndices 11 ent
-    let m = (ext:) . getMnemonicWords wl $ is 
-    pure $ toMnemonic seedPhraseDelim m
-
 randomWord8s :: (RandomGen g) => g -> Int -> ([Word8],g)
 randomWord8s g n
     | n <= 0    = ([],g)
@@ -26,8 +25,20 @@ randomWord8s g n
                       (ws,g'') = randomWord8s g' (n-1)
                   in  (w:ws,g'')
 
-seedPhraseIndices :: BitSize -> Entropy -> Either String WordIndices
-seedPhraseIndices wlsl2 ent
+genEntropy :: IO Entropy
+genEntropy = do 
+    g      <- newStdGen
+    let (xs,_) = randomWord8s g 16
+    return . BS.pack $ xs
+
+getSeedPhrase :: WordList -> Extension -> Entropy -> Either String Mnemonic 
+getSeedPhrase wl ext ent = do 
+    is <- getSeedPhraseIndices 11 ent
+    let m = (ext:) . getMnemonicWords wl $ is 
+    pure $ toMnemonic getSeedPhraseDelim m
+
+getSeedPhraseIndices :: BitSize -> Entropy -> Either String WordIndices
+getSeedPhraseIndices wlsl2 ent
     | entBytes < 16 = Left $ "Entropy must be at least 16 bytes long - provided " ++ show entBytes ++ " bytes only."
     | r /= 0        = Left $ "Entropy size must be divisible by 4 - provided " ++ show entBytes ++ " bytes."
     | otherwise     = Right $ wordIndices wlsl2 entcs where
@@ -70,8 +81,8 @@ wordIndices wlsl2 n = fmap fromIntegral . reverse . f q . (`shiftR` r) . bytesTo
 getMnemonicWords :: WordList -> WordIndices -> Words
 getMnemonicWords ws = fmap (ws V.!)
  
-seedPhraseDelim :: Delimiter
-seedPhraseDelim = "-"
+getSeedPhraseDelim :: Delimiter
+getSeedPhraseDelim = "-"
 
 toMnemonic :: Delimiter -> Words -> Mnemonic
 toMnemonic = intercalate
