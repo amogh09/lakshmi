@@ -1,6 +1,6 @@
 -- Implements BIP39 mnemonic phase standard
 
-module MnemonicGen 
+module Wallet.MnemonicGen
     (
         getSeedPhrase
     ,   loadWordList
@@ -14,9 +14,9 @@ import Data.Word
 import qualified Data.ByteString as BS 
 import Crypto.Hash
 import qualified Data.Vector as V
-import MonadFileRepoClass
+import Wallet.MonadFileRepoClass
 import Data.List (intercalate)
-import CryptoFuns
+import Wallet.CryptoFuns
 
 randomWord8s :: (RandomGen g) => g -> Int -> ([Word8],g)
 randomWord8s g n

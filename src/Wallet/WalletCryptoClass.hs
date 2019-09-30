@@ -1,11 +1,11 @@
-module WalletCryptoClass where
+module Wallet.WalletCryptoClass where
 
 import qualified Data.ByteString.UTF8 as BU
 import Crypto.Hash
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as BS
-import Trx
-import CryptoFuns
+import Wallet.Trx
+import Wallet.CryptoFuns
 
 type CryptoAddress = Integer
 

@@ -1,4 +1,4 @@
-module ListFuns 
+module Wallet.ListFuns
     (
         selectIdxs
     ,   rejectIdxs

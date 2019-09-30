@@ -1,14 +1,12 @@
-module Main where
-
-import Wallet
+import Wallet.Wallet
 import Options.Applicative
 import Data.Semigroup ((<>))
 import System.IO
 import System.Environment
 import Debug.Trace
-import Trx
-import ListFuns
-import TupleFuns
+import Wallet.Trx
+import Wallet.ListFuns
+import Wallet.TupleFuns
 
 data Command = 
         Show ShowCommand

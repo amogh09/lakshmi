@@ -37,6 +37,8 @@ dependencies:
 - random
 - optparse-applicative
 - split
+- network
+- hslogger
 
 library:
   source-dirs: src

@@ -1,4 +1,4 @@
-module ModelDbClass where 
+module Wallet.ModelDbClass where
 
 import Data.Serialize
 

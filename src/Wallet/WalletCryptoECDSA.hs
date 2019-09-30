@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module WalletCryptoECDSA 
+module Wallet.WalletCryptoECDSA
     (
         WalletCryptoECDSA
     ,   runWalletCryptoECDSA
@@ -11,8 +11,8 @@ module WalletCryptoECDSA
     ,   SeedPhrase
     ) where
 
-import CryptoFuns
-import WalletCryptoClass
+import Wallet.CryptoFuns
+import Wallet.WalletCryptoClass
 import Control.Monad.Reader
 import Control.Monad.Except
 import qualified Crypto.PubKey.ECC.ECDSA as ECDSA

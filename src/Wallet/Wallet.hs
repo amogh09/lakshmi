@@ -1,24 +1,24 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Wallet where
+module Wallet.Wallet where
 
 import Control.Monad.Reader
 import Control.Monad.Except
-import UserDbFileBased
-import WalletCryptoECDSA
-import AddressEncoder
-import ModelDbFileBased
+import Wallet.UserDbFileBased
+import Wallet.WalletCryptoECDSA
+import Wallet.AddressEncoder
+import Wallet.ModelDbFileBased
 import qualified Data.Serialize as S
-import qualified AddressEncoder as A
-import Trx
-import WalletCryptoClass
+import qualified Wallet.AddressEncoder as A
+import Wallet.Trx
+import Wallet.WalletCryptoClass
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import System.Directory
 import System.FilePath
-import User
+import Wallet.User
 import System.IO
-import MnemonicGen
+import Wallet.MnemonicGen
 
 data WalletEnv = WalletEnv {  
         workDir              :: FilePath

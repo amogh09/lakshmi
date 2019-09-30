@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveAnyClass, DeriveGeneric #-}
 
-module Trx
+module Wallet.Trx
     (
         LakshmiAddress
     ,   Trx (..)
@@ -26,7 +26,7 @@ import qualified Data.Serialize as S
 import GHC.Generics
 import qualified Data.Set as Set
 import qualified Data.Map as Map
-import ListFuns
+import Wallet.ListFuns
 import Data.List (sort, groupBy, (\\))
 import Control.Monad
 

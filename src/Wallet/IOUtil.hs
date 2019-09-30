@@ -1,4 +1,4 @@
-module IOUtil
+module Wallet.IOUtil
     (
         catchIO
     ) where

@@ -1,4 +1,4 @@
-module AddressEncoder (encode58) where 
+module Wallet.AddressEncoder (encode58) where
 
 import qualified Data.Vector as V
 

@@ -1,4 +1,4 @@
-module MonadFileRepoClass 
+module Wallet.MonadFileRepoClass
     ( 
         MonadFileRepo (..)
     ) where

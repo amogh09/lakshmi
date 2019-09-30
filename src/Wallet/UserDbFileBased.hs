@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module UserDbFileBased 
+module Wallet.UserDbFileBased
     (
         MonadUserDb (..)
     ,   runUserDbFileBased
@@ -10,7 +10,7 @@ module UserDbFileBased
     ,   UserDbFileBasedEnv (..)
     ) where 
 
-import UserDbClass
+import Wallet.UserDbClass
 import Control.Monad.Reader
 import System.FilePath ((</>))
 import Control.Monad.Except
@@ -18,7 +18,7 @@ import System.IO
 import System.IO.Error
 import System.Directory
 import Control.Exception
-import IOUtil
+import Wallet.IOUtil
 
 newtype UserDbFileBased a = UserDbFileBased {
         unUserDbFileBased :: ExceptT UserDbError (ReaderT UserDbFileBasedEnv IO) a

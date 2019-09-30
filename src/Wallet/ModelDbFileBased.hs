@@ -5,7 +5,7 @@
     ,   UndecidableInstances 
 #-}
 
-module ModelDbFileBased 
+module Wallet.ModelDbFileBased
     (
         readModel
     ,   writeModel
@@ -19,11 +19,11 @@ module ModelDbFileBased
     ,   liftModelDbError
     ) where
 
-import ModelDbClass
+import Wallet.ModelDbClass
 import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Serialize (encode, decode)
-import MonadFileRepoClass
+import Wallet.MonadFileRepoClass
 
 newtype ModelDbFileBased m a = ModelDbFileBased {
         unModelDbFileBased :: ReaderT FilePath (ExceptT ModelDbFileBasedError m) a

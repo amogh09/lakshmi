@@ -1,4 +1,4 @@
-module UserDbClass where
+module Wallet.UserDbClass where
 
 class Monad m => MonadUserDb m where 
     initUser :: m ()

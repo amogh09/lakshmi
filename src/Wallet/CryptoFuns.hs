@@ -1,8 +1,8 @@
 -- Module containing helpful crypto functions
 
-module CryptoFuns where
+module Wallet.CryptoFuns where
 
-import AddressEncoder
+import Wallet.AddressEncoder
 import Crypto.Hash
 import Data.Bits (shiftL, (.|.),shiftR)
 import Data.List (foldl')

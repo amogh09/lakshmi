@@ -1,10 +1,10 @@
-module User
+module Wallet.User
     (
         toUserId
     ) where
 
-import CryptoFuns
-import WalletCryptoECDSA
+import Wallet.CryptoFuns
+import Wallet.WalletCryptoECDSA
 
 type UserId = String 
 
