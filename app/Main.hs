@@ -7,6 +7,7 @@ import Debug.Trace
 import Wallet.Trx
 import Wallet.ListFuns
 import Wallet.TupleFuns
+import Log.Logger
 
 data Command = 
         Show ShowCommand
@@ -101,10 +102,13 @@ run (Send kvs) = do
     runWallet env (sendCoins kvs) >>= printErrorOrResult
 
 main :: IO ()
-main = run =<< execParser opts where 
-    opts = info (parser <**> helper)
-        (
-            fullDesc
-       <>   progDesc "Please use -h option to see usage instructions."
-       <>   header   "Welcome to Lakshmi Wallet. Please see usage instructions below."       
-        )
+main = do
+    setupLogging
+    run =<< execParser opts 
+    where 
+        opts = info (parser <**> helper)
+            (
+                fullDesc
+            <>   progDesc "Please use -h option to see usage instructions."
+            <>   header   "Welcome to Lakshmi Wallet. Please see usage instructions below."       
+            )

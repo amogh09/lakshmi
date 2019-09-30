@@ -1,4 +1,4 @@
-module Miner.Server 
+module Network.Server 
     (
         startServer
     ,   echoHandler
@@ -10,7 +10,7 @@ import System.Log.Logger
 import System.IO
 import Control.Monad
 import Control.Concurrent
-import Miner.Logger
+import Log.Logger
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.UTF8 as BU
 

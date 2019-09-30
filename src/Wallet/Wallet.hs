@@ -19,6 +19,9 @@ import System.FilePath
 import Wallet.User
 import System.IO
 import Wallet.MnemonicGen
+import Network.Client
+import System.Log.Logger
+import Text.Printf
 
 data WalletEnv = WalletEnv {  
         workDir              :: FilePath
@@ -134,8 +137,13 @@ checkBalance = do
     `catchError` handleError
 
 pushTrx :: TrxHashMap -> Trx -> Wallet ()
-pushTrx m t = let m' = Map.insert (trxHasher t) t m
-              in  liftTrxDbFileBased . writeModel . fromTrxHashMap $ m'
+pushTrx m t = do 
+    liftIO $ infoM "Wallet" (printf "Publishing trx '%s' to network" (show t))
+    liftIO $ publishBytes "Wallet" "localhost" "1234" (S.encode t)
+    liftIO $ infoM "Wallet" "Writing transaction to file"
+    liftTrxDbFileBased . writeModel $ m'     
+    where
+        m' = fromTrxHashMap . Map.insert (trxHasher t) t $ m
 
 generateTrx :: TrxHashMap -> [(LakshmiAddress,Integer)] -> Wallet Trx
 generateTrx m ys = do 
@@ -146,7 +154,7 @@ generateTrx m ys = do
     if bal < val 
         then throwError $ WalletNotEnoughBalanceError "You don't have enough balance"
         else let (ls,_) = spendUtxos m val xs
-                 change  = sumUtxos m ls - val
+                 change = sumUtxos m ls - val
              in  if change > 0 
                     then do 
                         c <- newAddress

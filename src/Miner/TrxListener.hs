@@ -4,7 +4,7 @@ module Miner.TrxListener
   ) where
 
 import Data.Serialize as S
-import Miner.Server
+import Network.Server
 import System.Log.Logger
 import Wallet.Trx
 
