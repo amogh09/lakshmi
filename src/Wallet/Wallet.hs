@@ -10,7 +10,7 @@ import Wallet.AddressEncoder
 import Wallet.ModelDbFileBased
 import qualified Data.Serialize as S
 import qualified Wallet.AddressEncoder as A
-import Wallet.Trx
+import Data.Trx
 import Wallet.WalletCryptoClass
 import qualified Data.Set as Set
 import qualified Data.Map as Map

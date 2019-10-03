@@ -5,7 +5,7 @@ module Wallet.TrxDbClass
     ,   readAllTrx
     ) where 
 
-import Wallet.Trx
+import Data.Trx
 
 class Monad m => MonadTrxDb m where 
     writeAllTrx :: [Trx] -> m () 

@@ -39,6 +39,7 @@ dependencies:
 - split
 - network
 - hslogger
+- stm
 
 library:
   source-dirs: src

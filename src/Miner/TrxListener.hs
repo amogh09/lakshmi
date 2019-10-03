@@ -6,21 +6,25 @@ module Miner.TrxListener
 import Data.Serialize as S
 import Network.Server
 import System.Log.Logger
-import Wallet.Trx
+import Data.Trx
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TChan
+import Network.Types
 
 loggerName :: String 
-loggerName = "Lakshmi.TrxListener"
+loggerName = "Miner.TrxListener"
 
-startListener :: String   -- Port
-              -> IO () 
-startListener port = do 
+startListener :: TChan Trx -> Port -> IO () 
+startListener c port = do 
   updateGlobalLogger loggerName (setLevel DEBUG)
-  startServer loggerName port trxHandler 
+  startServer loggerName port (trxHandler c)
 
-trxHandler :: MsgHandler
-trxHandler addr bytes = either logErrAndReturn handleTrx $ S.decode bytes
+trxHandler :: TChan Trx -> MsgHandler
+trxHandler c addr bytes = either logErrAndReturn (processTrx c) $ S.decode bytes
   where 
     logErrAndReturn _  = errorM loggerName $ "Failed to decode trx from '" ++ (show bytes) ++ "'"
 
-handleTrx :: Trx -> IO () 
-handleTrx = print
+processTrx :: TChan Trx -> Trx -> IO () 
+processTrx c trx = do  
+  infoM loggerName $ "Received trx: " ++ show trx
+  atomically $ writeTChan c trx

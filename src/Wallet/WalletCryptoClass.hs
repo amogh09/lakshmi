@@ -4,7 +4,7 @@ import qualified Data.ByteString.UTF8 as BU
 import Crypto.Hash
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as BS
-import Wallet.Trx
+import Data.Trx
 import Wallet.CryptoFuns
 
 type CryptoAddress = Integer

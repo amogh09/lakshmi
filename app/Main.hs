@@ -4,7 +4,7 @@ import Data.Semigroup ((<>))
 import System.IO
 import System.Environment
 import Debug.Trace
-import Wallet.Trx
+import Data.Trx
 import Wallet.ListFuns
 import Wallet.TupleFuns
 import Log.Logger

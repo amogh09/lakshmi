@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveAnyClass, DeriveGeneric #-}
 
-module Wallet.Trx
+module Data.Trx
     (
         LakshmiAddress
     ,   Trx (..)
@@ -20,6 +20,7 @@ module Wallet.Trx
     ,   TrxHashMap
     ,   sumUtxos
     ,   UTXO
+    ,   UTXOSet
     ) where
 
 import qualified Data.Serialize as S
@@ -52,6 +53,8 @@ data Trx = Trx {
 type TrxHashMap = Map.Map TrxHash Trx
 
 type UTXO = TrxInput
+
+type UTXOSet = Set.Set UTXO
 
 fromTrxHashMap :: TrxHashMap -> [Trx]
 fromTrxHashMap = fmap snd . Map.toList

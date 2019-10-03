@@ -10,9 +10,8 @@ import qualified Data.ByteString.Char8 as BC
 import Text.Printf (printf)
 import System.IO
 import System.Log.Logger
+import Network.Types
 
-type Port = String
-    
 openHandle :: LoggerName -> HostName -> Port -> IO Handle 
 openHandle loggerName host port = do 
     addrInfo:_ <- getAddrInfo Nothing (Just host) (Just port)
@@ -21,16 +20,14 @@ openHandle loggerName host port = do
     infoM loggerName (printf "Attempting to connect to %s:%s" host port)
     connect sock (addrAddress addrInfo)
     infoM loggerName (printf "Connection to %s:%s established" host port)
-    h          <- socketToHandle sock WriteMode     
+    h          <- socketToHandle sock WriteMode
     hSetBuffering h (BlockBuffering Nothing)
-    return h 
+    return h
 
 publishBytes :: LoggerName -> HostName -> Port -> BS.ByteString -> IO ()
 publishBytes loggerName hostName port bs = do 
     h <- openHandle loggerName hostName port 
     infoM loggerName "Sending bytes to server"
     BC.hPutStrLn h bs
-    -- Explicitly call hFlush after each message, so that
-    -- messages get logged immediately
     hFlush h 
     hClose h
