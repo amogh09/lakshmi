@@ -1,8 +1,6 @@
 {-# LANGUAGE 
         GeneralizedNewtypeDeriving
-    ,   FlexibleContexts
     ,   MultiParamTypeClasses
-    ,   FunctionalDependencies 
 #-}
 
 module Miner.TrxValidation
@@ -23,6 +21,8 @@ newtype Validation a = Validation {
         Functor
     ,   Applicative
     ,   Monad
+    ,   MonadState UTXOSet
+    ,   MonadError String
     )
 
 instance (MonadValidation Trx ValidatedTrx) Validation where 

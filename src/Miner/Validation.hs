@@ -1,9 +1,4 @@
-{-# LANGUAGE 
-        GeneralizedNewtypeDeriving
-    ,   FlexibleContexts
-    ,   MultiParamTypeClasses
-    ,   FunctionalDependencies 
-#-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module Miner.Validation 
     (
