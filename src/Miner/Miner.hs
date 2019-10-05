@@ -23,19 +23,17 @@ import qualified Data.BlockChain as BC
 loggerName :: LoggerName 
 loggerName = "Miner.Miner"
 
-forkIOWithWait :: IO () -> IO (MVar ())
-forkIOWithWait io = do 
-    mvar <- newEmptyMVar 
-    forkFinally io $ either (\e -> errorM loggerName ("Exception: " ++ show e) >> putMVar mvar ()) (\_ -> putMVar mvar ())
-    return mvar 
+forkIOWithWait :: MVar () -> IO () -> IO ThreadId
+forkIOWithWait mvar io = do 
+    forkFinally io $ either 
+        (\e -> errorM loggerName ("Exception: " ++ show e) >> putMVar mvar ()) 
+        (\_ -> infoM loggerName "Thread finished" >> putMVar mvar ())    
 
-checkOnThreads :: [MVar ()] -> IO () 
-checkOnThreads ts = do
+checkOnThreads :: MVar () -> IO () 
+checkOnThreads m = do
     infoM loggerName "Checking on threads"
-    statuses <- mapM tryTakeMVar ts 
-    case find isJust statuses of 
-        Nothing -> threadDelay (10*1000*1000) >> checkOnThreads ts 
-        _       -> errorM loggerName "Some thread has exited. Exiting program." >> exitFailure
+    _ <- takeMVar m
+    errorM loggerName "Some thread has exited. Exiting program. See logs for more information." >> exitFailure
 
 startMiner :: IO () 
 startMiner = do 
@@ -46,13 +44,14 @@ startMiner = do
     bmrb <- BM.BlockMakerReadBox  `liftM` atomically newEmptyTMVar
     bmwb <- BM.BlockMakerWriteBox `liftM` atomically newEmptyTMVar
 
-    atomically $ putTMVar (BM.unBlockMakerWriteBox bmwb) (Block 0)
+    atomically $ putTMVar (BM.unBlockMakerWriteBox bmwb) (Block 0) -- TODO Remove
 
-    mv1  <- forkIOWithWait $ TL.startListener tc "1234" -- TODO Port from config
-    mv2  <- forkIOWithWait $ TP.runTrxProcessor (TP.trxProcessor vc tc) us
-    mv3  <- forkIOWithWait $ BM.startBlockMaker Nothing bs bmrb bmwb vc tc 
-    mv4  <- forkIOWithWait $ BCM.runBCM (BCM.startBCM bmrb bmwb) (BC.empty) -- TODO Initial blockchain
-    checkOnThreads [mv1,mv2,mv3,mv4]
+    mv   <- newEmptyMVar
+    _    <- forkIOWithWait mv $ TL.startListener tc "1234" -- TODO Port from config
+    _    <- forkIOWithWait mv $ TP.runTrxProcessor (TP.trxProcessor vc tc) us
+    _    <- forkIOWithWait mv $ BM.startBlockMaker Nothing bs bmrb bmwb vc tc 
+    _    <- forkIOWithWait mv $ BCM.runBCM (BCM.startBCM bmrb bmwb) (BC.empty) -- TODO Initial blockchain
+    checkOnThreads mv
     
     where         
         us = Set.empty -- TODO fetch UTXOs from somewhere 
