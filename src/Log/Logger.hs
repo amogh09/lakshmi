@@ -14,7 +14,7 @@ import System.IO
 type LoggerName = String
 
 defaultFormatter :: LogFormatter a
-defaultFormatter = simpleLogFormatter "[$time $loggerName $prio]> $msg"
+defaultFormatter = simpleLogFormatter "[$time $loggername $prio]> $msg"
 
 setupLogging :: IO ()
 setupLogging = do 

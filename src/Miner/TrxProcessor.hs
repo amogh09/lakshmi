@@ -33,6 +33,7 @@ runTrxProcessor p = evalStateT (unTrxProcessor p)
 trxProcessor :: TChan ValidatedTrx -> TChan Trx -> TrxProcessor ()
 trxProcessor vc tc = forever $ do
     trx <- liftIO . atomically . readTChan $ tc
+    liftIO $ infoM loggerName ("Processing transaction: " ++ show trx)
     us  <- get
     either (handleErr trx) handleProcessed . flip runValidation us . validate $ trx
     where         

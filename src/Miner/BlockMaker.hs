@@ -15,6 +15,7 @@ import Data.Trx
 import Data.ValidatedTrx
 import Log.Logger
 import Control.Exception
+import Text.Printf
 
 loggerName :: LoggerName 
 loggerName = "Miner.BlockMaker"
@@ -33,7 +34,9 @@ startBlockMaker :: Maybe ThreadId      -- ThreadId of previously started solver 
                 -> IO () 
 startBlockMaker maybeSolverTId bs readBox writeBox vc tc = do 
     vts         <- replicateM bs (atomically . readTChan $ vc)
+    infoM loggerName "Received enough transactions to put into a block. Will try to fetch latest block now."
     latestBlock <- atomically . takeTMVar . unBlockMakerReadBox $ readBox
+    infoM loggerName "Latest block has been fetched. Will spin a new block solver now."
     maybe (spinNewSolver latestBlock vts) (\tid -> killThread tid >> spinNewSolver latestBlock vts) maybeSolverTId
     where 
         spinNewSolver :: Block -> [ValidatedTrx] -> IO ()
@@ -41,16 +44,18 @@ startBlockMaker maybeSolverTId bs readBox writeBox vc tc = do
             infoM loggerName "Spinning new solver thread"
             solverTId <- forkFinally 
                             (return $ solveNewBlock prevBlock vts)
-                            (either (returnTrxsToPool vts) writeNewBlock)
+                            (either (returnTrxsToPool tc vts) (writeNewBlock writeBox))
             startBlockMaker (Just solverTId) bs readBox writeBox vc tc
-        returnTrxsToPool :: [ValidatedTrx] -> SomeException -> IO ()
-        returnTrxsToPool vts _ = do 
-            infoM loggerName "Block solver thread was killed - returning transactions to the pool"
-            atomically $ mapM_ (writeTChan tc) (unValidatedTrx <$> vts)
-        writeNewBlock :: Block -> IO ()
-        writeNewBlock block = do 
-            infoM loggerName "New block was solved - writing the block to BlockMakerWriteBox"
-            atomically . putTMVar (unBlockMakerWriteBox writeBox) $ block
+
+returnTrxsToPool :: TChan Trx -> [ValidatedTrx] -> SomeException -> IO ()
+returnTrxsToPool tc vts _ = do 
+    infoM loggerName "Already running block solver thread was killed - returning transactions to the pool"
+    atomically $ mapM_ (writeTChan tc) (unValidatedTrx <$> vts)
+
+writeNewBlock :: BlockMakerWriteBox -> Block -> IO ()
+writeNewBlock (BlockMakerWriteBox writeBox) block = do 
+    infoM loggerName (printf "New block '%s' was solved - writing the block to BlockMakerWriteBox" (show block))
+    atomically . putTMVar writeBox $ block
 
 solveNewBlock :: Block -> [ValidatedTrx] -> Block
-solveNewBlock prevBlock vts = undefined
+solveNewBlock (Block x) vts = Block (x + 1) -- TODO

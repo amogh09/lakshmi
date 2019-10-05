@@ -1,6 +1,6 @@
 module Data.Block
     (
-        Block
+        Block (..)
     ) where 
 
-data Block = Block Int -- TODO
+data Block = Block Int deriving (Show,Eq) -- TODO
