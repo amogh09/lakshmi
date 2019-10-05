@@ -5,4 +5,4 @@ module Data.ValidatedTrx
 
 import Data.Trx
 
-newtype ValidatedTrx = ValidatedTrx Trx
+newtype ValidatedTrx = ValidatedTrx { unValidatedTrx :: Trx }

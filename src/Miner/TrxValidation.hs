@@ -34,24 +34,27 @@ runValidation v = runExcept . runStateT (unValidation v)
 validateTrx :: Trx -> Validation ValidatedTrx
 validateTrx t = ValidatedTrx <$>
     (
-        verifyInsSigs t    
+        verifyTrxNotInBlockChain t
+    >>= verifyInsSigs 
     >>= verifyInsOwnership   
     >>= verifyInsAreEnough 
     >>= verifyInsUpdateUtxos 
     >>= addNewUtxos     
     )
 
+verifyTrxNotInBlockChain = undefined
+
 verifyInsSigs :: Trx -> Validation Trx
-verifyInsSigs = undefined 
+verifyInsSigs = undefined -- TODO
 
 verifyInsOwnership :: Trx -> Validation Trx
-verifyInsOwnership = undefined
+verifyInsOwnership = undefined -- TODO
 
 verifyInsAreEnough :: Trx -> Validation Trx
-verifyInsAreEnough = undefined
+verifyInsAreEnough = undefined -- TODO
 
 verifyInsUpdateUtxos :: Trx -> Validation Trx
-verifyInsUpdateUtxos = undefined
+verifyInsUpdateUtxos = undefined -- TODO
 
 addNewUtxos :: Trx -> Validation Trx
-addNewUtxos = undefined
+addNewUtxos = undefined -- TODO

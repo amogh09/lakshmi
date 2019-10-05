@@ -44,10 +44,15 @@ data TrxOutput = TrxOutput {
     ,   _address :: LakshmiAddress
     } deriving (Show, Generic, S.Serialize, Eq, Ord)
 
-data Trx = Trx {
+data Trx = 
+    Trx {
         _timestamp :: Integer
-    ,   _inputs  :: [TrxInput]
-    ,   _outputs :: [TrxOutput]
+    ,   _inputs    :: [TrxInput]
+    ,   _outputs   :: [TrxOutput]
+    } | 
+    CoinBase {
+        _timestamp       :: Integer  
+    ,   _coinBaseOutputs :: [TrxOutput]
     } deriving (Show, Generic, S.Serialize, Eq, Ord)
 
 type TrxHashMap = Map.Map TrxHash Trx
