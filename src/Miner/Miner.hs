@@ -45,14 +45,14 @@ startMiner = do
     vc    <- atomically $ newTChan 
     bmrb  <- BlockMakerReadBox `liftM` atomically newEmptyTMVar
     bcmrc <- BCMReadChan `liftM` atomically newTChan
-    bprc  <- BPReadChan `liftM` atomically (dupTChan . unBCMReadChan $ bcmrc)
+    bprc  <- BPReadChan `liftM` atomically newTChan
 
     atomically $ writeTChan (unBCMReadChan bcmrc) (Block 0) -- TODO Remove
 
     mv    <- newEmptyMVar
     _     <- forkIOWithWait mv $ TL.startListener tc "1234" -- TODO Port from config
     _     <- forkIOWithWait mv $ TP.runTrxProcessor (TP.trxProcessor vc tc) us
-    _     <- forkIOWithWait mv $ BM.startBlockMaker Nothing bs bmrb bcmrc vc tc 
+    _     <- forkIOWithWait mv $ BM.startBlockMaker Nothing bs bmrb bcmrc bprc vc tc 
     _     <- forkIOWithWait mv $ BCM.runBCM (BCM.startBCM bmrb bcmrc) (BC.empty) -- TODO Initial blockchain
     _     <- forkIOWithWait mv $ BP.startBlockPublisher bprc bcmrc "1235" -- TODO port from config
     checkOnThreads mv

@@ -25,7 +25,7 @@ loggerName = "Miner.BlockPublisher"
 
 blockListner :: BCMReadChan -> Listener
 blockListner (BCMReadChan c) hdl = forever $ 
-    BS.hGetContents hdl >>= either handleErr handleBlock . S.decode
+    BS.hGetLine hdl >>= either handleErr handleBlock . S.decode
     where 
         handleErr   = errorM loggerName . ("Block could not be parsed. Error: " ++) . show
         handleBlock block = do 
@@ -58,11 +58,14 @@ testListener hdl = forever $ do
     where 
         handleErr   = errorM loggerName . ("Block could not be parsed. Error: " ++) . show
         handleBlock :: Block -> IO ()
-        handleBlock = infoM loggerName . ("Received block: " ++ ) . show
+        handleBlock block@(Block i) = do
+            infoM loggerName ("Received block: " ++ show block)
+            BC.hPutStrLn hdl . S.encode . Block $ i + 1
+            hFlush hdl 
 
 startTestClient :: IO () 
 startTestClient = do 
     setupLogging
-    hdl <- openHandle loggerName ReadMode "localhost" "1235" 
+    hdl <- openHandle loggerName ReadWriteMode "localhost" "1235" 
     hSetBuffering hdl LineBuffering 
     testListener hdl

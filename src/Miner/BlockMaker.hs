@@ -25,10 +25,11 @@ startBlockMaker :: Maybe ThreadId      -- ThreadId of previously started solver 
                 -> BlockSize           -- Block size             
                 -> BlockMakerReadBox   -- Mutable variable for reading latest block written by BlockChain 
                 -> BCMReadChan         -- Channel for writing newly created block to be read by BlockChain
+                -> BPReadChan          -- Channel for publishing new blocks to the network
                 -> TChan ValidatedTrx  -- Channel for reading newly validated transactions to be put into blocks
                 -> TChan Trx           -- Channel to return transactions to the pool
                 -> IO () 
-startBlockMaker maybeSolverTId bs readBox writeBox vc tc = do 
+startBlockMaker maybeSolverTId bs readBox bcmrc bprc vc tc = do 
     vts         <- replicateM bs (atomically . readTChan $ vc)
     infoM loggerName "Received enough transactions to put into a block. Will try to fetch latest block now."
     latestBlock <- atomically . takeTMVar . unBlockMakerReadBox $ readBox
@@ -40,18 +41,18 @@ startBlockMaker maybeSolverTId bs readBox writeBox vc tc = do
             infoM loggerName "Spinning new solver thread"
             solverTId <- forkFinally 
                             (return $ solveNewBlock prevBlock vts)
-                            (either (returnTrxsToPool tc vts) (writeNewBlock writeBox))
-            startBlockMaker (Just solverTId) bs readBox writeBox vc tc
+                            (either (returnTrxsToPool tc vts) (writeNewBlock bcmrc bprc))
+            startBlockMaker (Just solverTId) bs readBox bcmrc bprc vc tc
 
 returnTrxsToPool :: TChan Trx -> [ValidatedTrx] -> SomeException -> IO ()
 returnTrxsToPool tc vts _ = do 
     infoM loggerName "Already running block solver thread was killed - returning transactions to the pool"
     atomically $ mapM_ (writeTChan tc) (unValidatedTrx <$> vts)
 
-writeNewBlock :: BCMReadChan -> Block -> IO ()
-writeNewBlock (BCMReadChan writeChan) block = do 
-    infoM loggerName (printf "New block '%s' was solved - writing the block to BCMReadBox" (show block))
-    atomically . writeTChan writeChan $ block
+writeNewBlock :: BCMReadChan -> BPReadChan -> Block -> IO ()
+writeNewBlock (BCMReadChan bcmrc) (BPReadChan bprc) block = do 
+    infoM loggerName (printf "New block '%s' was solved - writing the block to BCMReadChan and BPReadChan" (show block))
+    atomically $ (writeTChan bprc block >> writeTChan bcmrc block)
 
 solveNewBlock :: Block -> [ValidatedTrx] -> Block
 solveNewBlock (Block x) vts = Block (x + 1) -- TODO
