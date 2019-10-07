@@ -1,8 +1,6 @@
 module Miner.BlockMaker 
     (
         startBlockMaker
-    ,   BlockMakerReadBox (..)
-    ,   BlockMakerWriteBox (..)
     ) where 
 
 import Control.Concurrent
@@ -16,19 +14,17 @@ import Data.ValidatedTrx
 import Log.Logger
 import Control.Exception
 import Text.Printf
+import Data.Box
 
 loggerName :: LoggerName 
 loggerName = "Miner.BlockMaker"
 
 type BlockSize = Int 
 
-newtype BlockMakerReadBox  = BlockMakerReadBox  { unBlockMakerReadBox  :: TMVar Block }
-newtype BlockMakerWriteBox = BlockMakerWriteBox { unBlockMakerWriteBox :: TMVar Block }
-
 startBlockMaker :: Maybe ThreadId      -- ThreadId of previously started solver thread
                 -> BlockSize           -- Block size             
                 -> BlockMakerReadBox   -- Mutable variable for reading latest block written by BlockChain 
-                -> BlockMakerWriteBox  -- Mutable variable for writing newly created block to be read by BlockChain
+                -> BCMReadChan         -- Channel for writing newly created block to be read by BlockChain
                 -> TChan ValidatedTrx  -- Channel for reading newly validated transactions to be put into blocks
                 -> TChan Trx           -- Channel to return transactions to the pool
                 -> IO () 
@@ -52,10 +48,10 @@ returnTrxsToPool tc vts _ = do
     infoM loggerName "Already running block solver thread was killed - returning transactions to the pool"
     atomically $ mapM_ (writeTChan tc) (unValidatedTrx <$> vts)
 
-writeNewBlock :: BlockMakerWriteBox -> Block -> IO ()
-writeNewBlock (BlockMakerWriteBox writeBox) block = do 
-    infoM loggerName (printf "New block '%s' was solved - writing the block to BlockMakerWriteBox" (show block))
-    atomically . putTMVar writeBox $ block
+writeNewBlock :: BCMReadChan -> Block -> IO ()
+writeNewBlock (BCMReadChan writeChan) block = do 
+    infoM loggerName (printf "New block '%s' was solved - writing the block to BCMReadBox" (show block))
+    atomically . writeTChan writeChan $ block
 
 solveNewBlock :: Block -> [ValidatedTrx] -> Block
 solveNewBlock (Block x) vts = Block (x + 1) -- TODO

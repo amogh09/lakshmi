@@ -2,7 +2,9 @@ module Network.Server
     (
         startServer
     ,   echoHandler
+    ,   singleMsgHandler
     ,   MsgHandler
+    ,   ConnHandler
     ) where 
 
 import Network.Socket
@@ -13,34 +15,33 @@ import Control.Concurrent
 import Log.Logger
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.UTF8 as BU
-
-type MsgHandler = SockAddr -> BS.ByteString -> IO () 
+import Network.Types
 
 startServer :: LoggerName
-            -> String      -- Port number
-            -> MsgHandler  -- Handler function
+            -> Port         -- Port number
+            -> ConnHandler  -- Handler function
             -> IO ()
-startServer loggerName port handler = do    
+startServer loggerName port handler = do
     addr:_ <- getAddrInfo (Just tcpServerAddrInfo) Nothing (Just port)
     sock   <- socket (addrFamily addr) (addrSocketType addr) defaultProtocol
     bind sock (addrAddress addr)
     listen sock 5 
     infoM loggerName $ "Accepting connections now at port " ++ show port ++ "..."
-    procRequests loggerName sock handler
+    acceptAndManageConns loggerName sock handler
 
 tcpServerAddrInfo :: AddrInfo 
 tcpServerAddrInfo = defaultHints {addrFlags = [AI_PASSIVE]}
 
 -- Process incoming connection requests 
-procRequests :: LoggerName -> Socket -> MsgHandler -> IO ()
-procRequests loggerName masterSock handler = forever $ do 
+acceptAndManageConns :: LoggerName -> Socket -> ConnHandler -> IO ()
+acceptAndManageConns loggerName masterSock connHandler = forever $ do 
     (connSock,clientAddr) <- accept masterSock
     infoM loggerName ("Client connected: " ++ show clientAddr)
-    forkIO $ procMessages loggerName connSock clientAddr handler
+    forkIO $ connHandler connSock clientAddr
 
--- Process incoming messages from a single connection
-procMessages :: LoggerName -> Socket -> SockAddr -> MsgHandler -> IO () 
-procMessages loggerName connSock clientAddr handler = do 
+-- Closes the connection after receiving one message 
+singleMsgHandler :: LoggerName -> MsgHandler -> Socket -> SockAddr -> IO () 
+singleMsgHandler loggerName handler connSock clientAddr = do 
     connHandle <- socketToHandle connSock ReadMode
     hSetBuffering connHandle LineBuffering 
     messages   <- BS.hGetContents connHandle

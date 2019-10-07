@@ -8,6 +8,7 @@ import qualified Miner.TrxProcessor as TP
 import qualified Miner.BlockMaker as BM
 import qualified Data.Set as Set 
 import qualified Miner.BlockChainManager as BCM
+import qualified Miner.BlockPublisher as BP
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TMVar
@@ -18,6 +19,7 @@ import System.Exit
 import Data.Maybe (isJust)
 import Data.List (find)
 import Data.Block
+import Data.Box
 import qualified Data.BlockChain as BC 
 
 loggerName :: LoggerName 
@@ -39,18 +41,20 @@ startMiner :: IO ()
 startMiner = do 
     setupLogging -- TODO Move to Main
 
-    tc   <- atomically $ newTChan 
-    vc   <- atomically $ newTChan 
-    bmrb <- BM.BlockMakerReadBox  `liftM` atomically newEmptyTMVar
-    bmwb <- BM.BlockMakerWriteBox `liftM` atomically newEmptyTMVar
+    tc    <- atomically $ newTChan 
+    vc    <- atomically $ newTChan 
+    bmrb  <- BlockMakerReadBox `liftM` atomically newEmptyTMVar
+    bcmrc <- BCMReadChan `liftM` atomically newTChan
+    bprc  <- BPReadChan `liftM` atomically (dupTChan . unBCMReadChan $ bcmrc)
 
-    atomically $ putTMVar (BM.unBlockMakerWriteBox bmwb) (Block 0) -- TODO Remove
+    atomically $ writeTChan (unBCMReadChan bcmrc) (Block 0) -- TODO Remove
 
-    mv   <- newEmptyMVar
-    _    <- forkIOWithWait mv $ TL.startListener tc "1234" -- TODO Port from config
-    _    <- forkIOWithWait mv $ TP.runTrxProcessor (TP.trxProcessor vc tc) us
-    _    <- forkIOWithWait mv $ BM.startBlockMaker Nothing bs bmrb bmwb vc tc 
-    _    <- forkIOWithWait mv $ BCM.runBCM (BCM.startBCM bmrb bmwb) (BC.empty) -- TODO Initial blockchain
+    mv    <- newEmptyMVar
+    _     <- forkIOWithWait mv $ TL.startListener tc "1234" -- TODO Port from config
+    _     <- forkIOWithWait mv $ TP.runTrxProcessor (TP.trxProcessor vc tc) us
+    _     <- forkIOWithWait mv $ BM.startBlockMaker Nothing bs bmrb bcmrc vc tc 
+    _     <- forkIOWithWait mv $ BCM.runBCM (BCM.startBCM bmrb bcmrc) (BC.empty) -- TODO Initial blockchain
+    _     <- forkIOWithWait mv $ BP.startBlockPublisher bprc bcmrc "1235" -- TODO port from config
     checkOnThreads mv
     
     where         

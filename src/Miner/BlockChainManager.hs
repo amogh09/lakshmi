@@ -12,6 +12,7 @@ import Miner.BlockMaker
 import Control.Monad.State
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TMVar
+import Data.Box
 
 loggerName :: LoggerName 
 loggerName = "Miner.BlockChainManager"
@@ -29,11 +30,12 @@ newtype BlockChainManager a = BlockChainManager {
 runBCM :: BlockChainManager a -> BlockChain -> IO a 
 runBCM m = evalStateT (unBlockChainManager m)
 
-startBCM :: BlockMakerReadBox   -- To write new latest block to block solver
-         -> BlockMakerWriteBox  -- To read new latest block from block solver
+startBCM :: BlockMakerReadBox -- To write new latest block to block solver
+         -> BCMReadChan       -- To read new latest block from block solver and other nodes
          -> BlockChainManager ()
-startBCM (BlockMakerReadBox rb) (BlockMakerWriteBox wb) = forever $ do 
-    newBlock <- liftIO . atomically . takeTMVar $ wb
+startBCM (BlockMakerReadBox rb) (BCMReadChan bcmChan) = forever $ do 
+    newBlock <- liftIO . atomically . readTChan $ bcmChan
     liftIO $ infoM loggerName ("Received new block: " ++ show newBlock)
+    -- TODO Validate block here or in BlockListener
     modify (putBlock newBlock)
     get >>= liftIO . atomically . putTMVar rb . bcHead

@@ -5,7 +5,7 @@ module Miner.TrxListener
 
 import Data.Serialize as S
 import Network.Server
-import System.Log.Logger
+import Log.Logger
 import Data.Trx
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TChan
@@ -17,7 +17,9 @@ loggerName = "Miner.TrxListener"
 startListener :: TChan Trx -> Port -> IO () 
 startListener c port = do 
   updateGlobalLogger loggerName (setLevel DEBUG)
-  startServer loggerName port (trxHandler c)
+  startServer loggerName port connHandler
+  where
+    connHandler = singleMsgHandler loggerName (trxHandler c)
 
 trxHandler :: TChan Trx -> MsgHandler
 trxHandler c addr bytes = either logErrAndReturn (processTrx c) $ S.decode bytes
