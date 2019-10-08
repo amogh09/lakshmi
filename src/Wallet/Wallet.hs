@@ -139,7 +139,7 @@ checkBalance = do
 pushTrx :: TrxHashMap -> Trx -> Wallet ()
 pushTrx m t = do 
     liftIO $ infoM "Wallet" (printf "Publishing trx '%s' to network" (show t))
-    liftIO $ publishBytes "Wallet" "localhost" "1240" (S.encode t)
+    liftIO $ publishBytes "Wallet" "localhost" "1234" (S.encode t)
     liftIO $ infoM "Wallet" "Writing transaction to file"
     liftTrxDbFileBased . writeModel $ m'     
     where

@@ -20,42 +20,46 @@ import Network.Client
 import Control.Monad
 import Data.Box
 import Data.Block
+import Text.Printf
 
 loggerName = "Miner.BlockPublisher"
 
 -- Listens for blocks from the handle
-blockListener :: BCMReadChan -> Handle -> IO ()
-blockListener (BCMReadChan c) hdl = forever $ 
-    BS.hGetLine hdl >>= either handleErr handleBlock . S.decode
+blockListener :: Show hostName => hostName -> BCMReadChan -> Handle -> IO ()
+blockListener hostName (BCMReadChan c) hdl = forever $ do 
+    bs <- BS.hGetLine hdl
+    infoM loggerName $ "Bytes '" ++ show bs ++ "' received from " ++ show hostName
+    either handleErr handleBlock . S.decode $ bs
     where 
-        handleErr   = errorM loggerName . ("Block could not be parsed. Error: " ++) . show
+        handleErr         = errorM loggerName . ("Block could not be parsed. Error: " ++) . show
         handleBlock block = do 
-            infoM loggerName $ "Block received from the network: " ++ show block
+            infoM loggerName $ "Block '" ++ show block ++ "' received from " ++ show hostName
             atomically . writeTChan c $ block
 
 -- Publishes blocks to the handle
-blockPublisher :: BPReadChan -> Handle -> IO ()
-blockPublisher (BPReadChan c) hdl = forever $ do 
-    bs <- S.encode `liftM` atomically (readTChan c)
-    infoM loggerName $ "Block received: " ++ show bs
-    BC.hPutStrLn hdl bs
+blockPublisher :: Show hostName => hostName -> BPReadChan -> Handle -> IO ()
+blockPublisher hostName (BPReadChan c) hdl = forever $ do 
+    block <- atomically (readTChan c)
+    infoM loggerName $ "Publishing block '" ++ show block ++ "' to " ++ show hostName
+    BC.hPutStrLn hdl . S.encode $ block
     hFlush hdl 
             
--- starts a publisher thread and a listener thread 
-publisherAndListener :: BCMReadChan -> BPReadChan -> Handle -> IO ()
-publisherAndListener bcmrc bprc hdl = do 
+-- Starts a listener thread and then assumes the role of publisher
+publisherAndListener :: Show hostName => BCMReadChan -> BPReadChan -> hostName -> Handle -> IO ()
+publisherAndListener bcmrc bprc hostName hdl = do 
     hSetBuffering hdl LineBuffering 
-    forkIO . blockListener bcmrc $ hdl
-    atomically (dupTChan . unBPReadChan $ bprc) >>= flip blockPublisher hdl . BPReadChan
+    forkIO . blockListener hostName bcmrc $ hdl
+    bprc' <- atomically (dupTChan . unBPReadChan $ bprc)
+    blockPublisher hostName (BPReadChan bprc') hdl
 
 -- Tries to connect to all nodes in the given list 
 startInitiator :: BCMReadChan -> BPReadChan -> [(HostName, Port)] -> IO ()
-startInitiator bcmrc bprc addrs = mapM_ initiateConn addrs
-    where initiateConn (h,p) = forkIO $ openHandle loggerName ReadWriteMode h p >>= publisherAndListener bcmrc bprc
+startInitiator bcmrc bprc addrs = mapM_ initiateConn addrs where 
+    initiateConn (h,p) = forkIO $ 
+        openHandle loggerName ReadWriteMode h p >>= publisherAndListener bcmrc bprc (h ++ ":" ++ p)
 
 -- Waits for other nodes to make a connection
 startReceiver :: BCMReadChan -> BPReadChan -> Port -> IO () 
 startReceiver bcmrc bprc port = 
-    startServer loggerName port . mkConnHandler ReadWriteMode . publisherAndListener bcmrc $ bprc
-
+    startServer loggerName port . mkConnHandler ReadWriteMode $ publisherAndListener bcmrc bprc
     
