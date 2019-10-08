@@ -17,6 +17,13 @@ import Data.Box
 loggerName :: LoggerName 
 loggerName = "Miner.BlockChainManager"
 
+ensureTMVar :: TMVar a -> a -> STM () 
+ensureTMVar v x = do 
+    f <- isEmptyTMVar v 
+    if f 
+        then putTMVar v x
+        else swapTMVar v x >> return ()
+
 newtype BlockChainManager a = BlockChainManager {
         unBlockChainManager :: StateT BlockChain IO a 
     } deriving (
@@ -38,4 +45,4 @@ startBCM (BlockMakerReadBox rb) (BCMReadChan bcmChan) = forever $ do
     liftIO $ infoM loggerName ("Received new block: " ++ show newBlock)
     -- TODO Validate block here or in BlockListener
     modify (putBlock newBlock)
-    get >>= liftIO . atomically . putTMVar rb . bcHead
+    get >>= liftIO . atomically . ensureTMVar rb . bcHead

@@ -32,3 +32,4 @@ publishBytes loggerName hostName port bs = do
     BC.hPutStrLn h bs
     hFlush h 
     hClose h
+    

@@ -3,6 +3,7 @@ module Network.Server
         startServer
     ,   echoHandler
     ,   singleMsgHandler
+    ,   mkConnHandler
     ,   MsgHandler
     ,   ConnHandler
     ) where 
@@ -51,3 +52,6 @@ singleMsgHandler loggerName handler connSock clientAddr = do
 
 echoHandler :: MsgHandler
 echoHandler addr msg = putStrLn $ "From " ++ show addr ++ ": " ++ (BU.toString msg)
+
+mkConnHandler :: IOMode -> (Handle -> IO ()) -> ConnHandler 
+mkConnHandler ioMode f sock sockAddr = socketToHandle sock ioMode >>= f

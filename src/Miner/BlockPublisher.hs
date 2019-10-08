@@ -1,7 +1,7 @@
 module Miner.BlockPublisher
     (
-        startBlockPublisher
-    ,   startTestClient
+        startInitiator
+    ,   startReceiver
     ) where 
 
 import Network.Types 
@@ -23,8 +23,9 @@ import Data.Block
 
 loggerName = "Miner.BlockPublisher"
 
-blockListner :: BCMReadChan -> Listener
-blockListner (BCMReadChan c) hdl = forever $ 
+-- Listens for blocks from the handle
+blockListener :: BCMReadChan -> Handle -> IO ()
+blockListener (BCMReadChan c) hdl = forever $ 
     BS.hGetLine hdl >>= either handleErr handleBlock . S.decode
     where 
         handleErr   = errorM loggerName . ("Block could not be parsed. Error: " ++) . show
@@ -32,40 +33,29 @@ blockListner (BCMReadChan c) hdl = forever $
             infoM loggerName $ "Block received from the network: " ++ show block
             atomically . writeTChan c $ block
 
-blockPublisher :: BPReadChan -> Listener
+-- Publishes blocks to the handle
+blockPublisher :: BPReadChan -> Handle -> IO ()
 blockPublisher (BPReadChan c) hdl = forever $ do 
-    infoM loggerName "Waiting for block"
-    bs <- S.encode `liftM` atomically (readTChan c)    
+    bs <- S.encode `liftM` atomically (readTChan c)
     infoM loggerName $ "Block received: " ++ show bs
     BC.hPutStrLn hdl bs
     hFlush hdl 
-        
-connHandler :: Listener -> Listener -> ConnHandler 
-connHandler blockListener blockPublisher sock sockAddr = do 
-    hdl <- socketToHandle sock ReadWriteMode
-    hSetBuffering hdl LineBuffering
-    forkIO $ blockListener hdl
-    blockPublisher hdl
-    
-startBlockPublisher :: BPReadChan -> BCMReadChan -> Port -> IO () 
-startBlockPublisher bprc bcmrc port = 
-    startServer loggerName port $ connHandler (blockListner bcmrc) (blockPublisher bprc)
-
-testListener :: Listener
-testListener hdl = forever $ do
-    infoM loggerName "Waiting for block..."
-    BS.hGetLine hdl >>= either handleErr handleBlock . S.decode
-    where 
-        handleErr   = errorM loggerName . ("Block could not be parsed. Error: " ++) . show
-        handleBlock :: Block -> IO ()
-        handleBlock block@(Block i) = do
-            infoM loggerName ("Received block: " ++ show block)
-            BC.hPutStrLn hdl . S.encode . Block $ i + 1
-            hFlush hdl 
-
-startTestClient :: IO () 
-startTestClient = do 
-    setupLogging
-    hdl <- openHandle loggerName ReadWriteMode "localhost" "1235" 
+            
+-- starts a publisher thread and a listener thread 
+publisherAndListener :: BCMReadChan -> BPReadChan -> Handle -> IO ()
+publisherAndListener bcmrc bprc hdl = do 
     hSetBuffering hdl LineBuffering 
-    testListener hdl
+    forkIO . blockListener bcmrc $ hdl
+    atomically (dupTChan . unBPReadChan $ bprc) >>= flip blockPublisher hdl . BPReadChan
+
+-- Tries to connect to all nodes in the given list 
+startInitiator :: BCMReadChan -> BPReadChan -> [(HostName, Port)] -> IO ()
+startInitiator bcmrc bprc addrs = mapM_ initiateConn addrs
+    where initiateConn (h,p) = forkIO $ openHandle loggerName ReadWriteMode h p >>= publisherAndListener bcmrc bprc
+
+-- Waits for other nodes to make a connection
+startReceiver :: BCMReadChan -> BPReadChan -> Port -> IO () 
+startReceiver bcmrc bprc port = 
+    startServer loggerName port . mkConnHandler ReadWriteMode . publisherAndListener bcmrc $ bprc
+
+    
