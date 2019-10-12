@@ -3,7 +3,7 @@ module Wallet.User
         toUserId
     ) where
 
-import Wallet.CryptoFuns
+import Crypto.CryptoFuns
 import Wallet.WalletCryptoECDSA
 
 type UserId = String 

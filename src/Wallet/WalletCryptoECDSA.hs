@@ -11,7 +11,7 @@ module Wallet.WalletCryptoECDSA
     ,   SeedPhrase
     ) where
 
-import Wallet.CryptoFuns
+import Crypto.CryptoFuns
 import Wallet.WalletCryptoClass
 import Control.Monad.Reader
 import Control.Monad.Except

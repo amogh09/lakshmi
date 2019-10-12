@@ -1,6 +1,6 @@
 -- Module containing helpful crypto functions
 
-module Wallet.CryptoFuns where
+module Crypto.CryptoFuns where
 
 import Wallet.AddressEncoder
 import Crypto.Hash
@@ -30,3 +30,10 @@ integerToBytes :: Integer -> BS.ByteString
 integerToBytes = BS.reverse . f where
     f 0 = BS.empty 
     f n = fromIntegral (n `mod` 256) `BS.cons` f (n `shiftR` 8)
+
+merkleHash :: [BS.ByteString] -> BS.ByteString 
+merkleHash [x] = x 
+merkleHash xs  = merkleHash . pairs $ xs where 
+    pairs (y:y':ys) = hash256 (y `BS.append` y') : pairs ys 
+    pairs [y]       = pairs [y,y]
+    pairs []        = []

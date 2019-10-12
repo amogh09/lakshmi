@@ -32,7 +32,7 @@ runValidation :: Validation a -> UTXOSet -> Either String (a, UTXOSet)
 runValidation v = runExcept . runStateT (unValidation v) 
 
 validateTrx :: Trx -> Validation ValidatedTrx
-validateTrx t = return (ValidatedTrx t) 
+validateTrx t = return (fromTrx t) 
     -- ValidatedTrx <$>
     -- (
     --     verifyTrxNotInBlockChain t

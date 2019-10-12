@@ -46,19 +46,21 @@ startMiner wp np otherNodes = do
     bcmrc <- BCMReadChan `liftM` atomically newTChan
     bprc  <- BPReadChan `liftM` atomically newTChan
 
-    flushTChan (unBPReadChan bprc) -- bprc is not supposed to be used for receiving updates. BlockPublisher uses duplicate channels.
-
-    atomically $ writeTChan (unBCMReadChan bcmrc) (Block 0) -- TODO Remove
+    -- Flush (discard) all messages pushed into bprc.
+    -- bprc is not supposed to be used for receiving updates. It is only for pushing updates.
+    -- BlockPublisher uses duplicate channels (one per thread) to receive updates.
+    _     <- flushTChan (unBPReadChan bprc) 
 
     mv    <- newEmptyMVar
     _     <- forkIOWithWait mv $ TL.startListener tc wp -- TODO Port from config
     _     <- forkIOWithWait mv $ TP.runTrxProcessor (TP.trxProcessor vc tc) us
-    _     <- forkIOWithWait mv $ BM.startBlockMaker Nothing bs bmrb bcmrc bprc vc tc 
-    _     <- forkIOWithWait mv $ BCM.runBCM (BCM.startBCM bmrb bcmrc) (BC.empty) -- TODO Initial blockchain    
-    _     <- forkIOWithWait mv $ BP.startReceiver  bcmrc bprc np -- TODO port from config
-    forkIO $ BP.startInitiator bcmrc bprc otherNodes -- TODO port from config
+    _     <- forkIOWithWait mv $ BM.startBlockMaker Nothing trgt bs bmrb bcmrc bprc vc tc 
+    _     <- forkIOWithWait mv $ BCM.runBCM (BCM.startBCM bmrb bcmrc) BC.empty -- TODO Initial blockchain    
+    _     <- forkIOWithWait mv $ BP.startReceiver bcmrc bprc np -- TODO port from config
+    _     <- forkIO $ BP.startInitiator bcmrc bprc otherNodes -- TODO port from config
     checkOnThreads mv
     
     where         
-        us = Set.empty -- TODO fetch UTXOs from somewhere 
-        bs = 1         -- TODO BlockSize        
+        us   = Set.empty      -- TODO fetch UTXOs from somewhere 
+        bs   = 1              -- TODO BlockSize        
+        trgt = 2^(256-16) - 1 -- 16 leading zeros TODO

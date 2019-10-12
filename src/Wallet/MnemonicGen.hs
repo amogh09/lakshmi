@@ -16,7 +16,7 @@ import Crypto.Hash
 import qualified Data.Vector as V
 import Wallet.MonadFileRepoClass
 import Data.List (intercalate)
-import Wallet.CryptoFuns
+import Crypto.CryptoFuns
 
 randomWord8s :: (RandomGen g) => g -> Int -> ([Word8],g)
 randomWord8s g n
