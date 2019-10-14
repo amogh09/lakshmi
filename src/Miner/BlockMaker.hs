@@ -40,7 +40,7 @@ startBlockMaker maybeSolverTId trgt bs readBox bcmrc bprc vc tc = do
     infoM loggerName "Latest block has been fetched. Will spin a new block solver now."
     maybe (spinNewSolver latestBlock vts) (\tid -> killThread tid >> spinNewSolver latestBlock vts) maybeSolverTId
     where 
-        spinNewSolver :: Block -> [ValidatedTrx] -> IO ()
+        spinNewSolver :: BlockHeader -> [ValidatedTrx] -> IO ()
         spinNewSolver prevBlock vts = do
             infoM loggerName "Spinning new solver thread"
             ts        <- round <$> getPOSIXTime
@@ -59,9 +59,9 @@ writeNewBlock (BCMReadChan bcmrc) (BPReadChan bprc) block = do
     infoM loggerName (printf "New block '%s' was solved - writing the block to BCMReadChan and BPReadChan" (show block))
     atomically $ (writeTChan bprc block >> writeTChan bcmrc block)
 
-solveNewBlock :: Timestamp -> Integer -> Block -> [ValidatedTrx] -> Block
+solveNewBlock :: Timestamp -> Integer -> BlockHeader -> [ValidatedTrx] -> Block
 solveNewBlock ts trgt pb vts = Block bh trxs where 
-    bh   = setNonce $ BlockHeader 0 trgt ts (MerkleHash . merkleHash . fmap S.encode $ trxs)
+    bh   = setNonce $ BlockHeader (bhId pb + 1) (hashBlock pb) 0 trgt ts (MerkleHash . merkleHash . fmap S.encode $ trxs)
     trxs = toTrx <$> vts
 
 -- Finds a fitting nonce and sets it on the block header

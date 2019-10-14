@@ -1,17 +1,17 @@
-module TrxSpec where 
+module Data.TrxSpec where 
 
-import Trx
-import TrxGen
+import Data.Trx
+import Data.TrxGen
 import Test.Hspec
 import Test.QuickCheck
-import WalletCryptoClass
+import Wallet.WalletCryptoClass
 import qualified Data.Set as Set
 import qualified Data.Serialize as S
-import qualified AddressEncoder as A
+import qualified Wallet.AddressEncoder as A
 import Data.List (nub, intersect,(\\))
 import Control.Monad
 import TestFuns
-import ListFuns
+import Data.ListFuns
 
 trxHasher = A.encode58 . trxHash S.encode
 

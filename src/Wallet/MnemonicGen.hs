@@ -5,6 +5,10 @@ module Wallet.MnemonicGen
         getSeedPhrase
     ,   loadWordList
     ,   genEntropy 
+    ,   toMnemonic
+    ,   getMnemonicWords
+    ,   takeBits
+    ,   wordIndices
     ) where 
 
 import Data.Bits (shiftR,complement,shiftL,(.&.))

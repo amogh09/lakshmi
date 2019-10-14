@@ -13,6 +13,7 @@ import Control.Monad.State
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TMVar
 import Data.Box
+import Data.Block
 
 loggerName :: LoggerName 
 loggerName = "Miner.BlockChainManager"
@@ -25,16 +26,16 @@ ensureTMVar v x = do
         else swapTMVar v x >> return ()
 
 newtype BlockChainManager a = BlockChainManager {
-        unBlockChainManager :: StateT BlockChain IO a 
+        unBlockChainManager :: StateT BlockChains IO a 
     } deriving (
         Functor
     ,   Applicative 
     ,   Monad 
-    ,   MonadState BlockChain
+    ,   MonadState BlockChains
     ,   MonadIO
     )
 
-runBCM :: BlockChainManager a -> BlockChain -> IO a 
+runBCM :: BlockChainManager a -> BlockChains -> IO a 
 runBCM m = evalStateT (unBlockChainManager m)
 
 startBCM :: BlockMakerReadBox -- To write new latest block to block solver
@@ -44,5 +45,6 @@ startBCM (BlockMakerReadBox rb) (BCMReadChan bcmChan) = forever $ do
     newBlock <- liftIO . atomically . readTChan $ bcmChan
     liftIO $ infoM loggerName ("Received new block: " ++ show newBlock)
     -- TODO Validate block here or in BlockListener
-    modify (putBlock newBlock)
-    get >>= liftIO . atomically . ensureTMVar rb . bcHead
+    bcs <- get 
+    either (liftIO . warningM loggerName . ("Error when putting new block in blockchain: " ++) . show) put $ putBlock newBlock bcs
+    get >>= liftIO . atomically . ensureTMVar rb . blockHeader . bcHead

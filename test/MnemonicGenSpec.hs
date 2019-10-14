@@ -1,13 +1,14 @@
 module MnemonicGenSpec where
 
-import MnemonicGen
+import Wallet.MnemonicGen
 import Test.Hspec
 import Test.QuickCheck    
 import qualified Data.ByteString as BS 
-import WalletCryptoClass
+import Wallet.WalletCryptoClass
 import qualified Data.Vector as V
 import MockFileRepo
 import Control.Monad.State
+import Crypto.CryptoFuns
 
 type Binary = String 
 

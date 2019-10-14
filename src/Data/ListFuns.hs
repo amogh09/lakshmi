@@ -1,12 +1,4 @@
-module Wallet.ListFuns
-    (
-        selectIdxs
-    ,   rejectIdxs
-    ,   splitGroupedKV
-    ,   hasNoDups
-    ,   flattenKeyVal
-    ,   parsePair
-    ) where 
+module Data.ListFuns where 
 
 import qualified Data.Set as Set
 import Data.List
@@ -50,3 +42,10 @@ flattenKeyVal ps = join [ [ (x,y) | y <- ys ] | (x,ys) <- ps ]
 -- parses string of format key=val and returns a pair (kev,val)
 parsePair :: String -> (String,String)
 parsePair s = let [addr,val] = splitOn "=" s in (addr,val)
+
+maximumOn :: (Ord b) => (a -> b) -> [a] -> a 
+maximumOn f = maximumBy (\x y -> f x `compare` f y)
+
+deleteOn :: (a -> Bool) -> [a] -> [a]
+deleteOn _ []     = [] 
+deleteOn f (x:xs) = if f x then xs else x : deleteOn f xs 

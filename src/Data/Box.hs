@@ -9,7 +9,7 @@ import Data.Block
 import Control.Concurrent.STM.TChan
 import Control.Concurrent.STM.TMVar
 
-newtype BlockMakerReadBox  = BlockMakerReadBox  { unBlockMakerReadBox  :: TMVar Block }
+newtype BlockMakerReadBox  = BlockMakerReadBox  { unBlockMakerReadBox  :: TMVar BlockHeader }
 
 newtype BCMReadChan = BCMReadChan { unBCMReadChan :: TChan Block }
         

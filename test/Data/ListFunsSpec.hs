@@ -1,8 +1,8 @@
-module ListFunsSpec where 
+module Data.ListFunsSpec where 
 
 import Test.Hspec
 import Test.QuickCheck    
-import ListFuns
+import Data.ListFuns
 import Data.List ((\\), intersect)
 import TestFuns
 

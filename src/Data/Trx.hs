@@ -27,7 +27,7 @@ import qualified Data.Serialize as S
 import GHC.Generics
 import qualified Data.Set as Set
 import qualified Data.Map as Map
-import Wallet.ListFuns
+import Data.ListFuns
 import Data.List (sort, groupBy, (\\))
 import Control.Monad
 

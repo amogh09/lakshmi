@@ -5,7 +5,7 @@ import System.IO
 import System.Environment
 import Debug.Trace
 import Data.Trx
-import Wallet.ListFuns
+import Data.ListFuns
 import Wallet.TupleFuns
 import Log.Logger
 

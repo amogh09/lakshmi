@@ -1,4 +1,4 @@
-module TrxGen 
+module Data.TrxGen 
     (
         TrxInput
     ,   TrxOutput
@@ -6,7 +6,7 @@ module TrxGen
     ) where
 
 import Test.QuickCheck
-import Trx
+import Data.Trx
 
 instance Arbitrary TrxInput where 
     arbitrary = do 

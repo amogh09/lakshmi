@@ -6,7 +6,7 @@ module MockFileRepo
     ) where 
 
 import Control.Exception
-import MonadFileRepoClass
+import Wallet.MonadFileRepoClass
 import Control.Monad.State
 import qualified Data.ByteString.UTF8 as BU
 import qualified Data.Serialize as S
